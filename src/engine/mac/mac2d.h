@@ -20,15 +20,20 @@ struct CellData2D {
   float density;
 };
 
-class MAC2d {
+class MAC2D {
 public:
-  MAC2d(int nx, int ny, float dx, float dy);
-  ~MAC2d();
+  MAC2D(int nx, int ny, float dx, float dy);
+  ~MAC2D() = default;
 
   int nx, ny;
   float dx, dy;
 
-private:
+  float u_vel(float x, float y) const;
+  float v_vel(float x, float y) const;
+
+  inline int u_idx(int i, int j) const { return i + j * (nx + 1); }
+  inline int v_idx(int i, int j) const { return i + j * nx; }
+
   std::vector<Cell2D> cells;
 
   std::vector<float> u; // x-face velocities

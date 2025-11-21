@@ -1,6 +1,7 @@
 #include "mac2d.h"
+#include "utils/interpolators.h"
 
-MAC2d::MAC2d(int nx, int ny, float dx, float dy)
+MAC2D::MAC2D(int nx, int ny, float dx, float dy)
     : nx(nx), ny(ny), dx(dx), dy(dy) {
 
   cells.resize(nx * ny);
@@ -26,4 +27,48 @@ MAC2d::MAC2d(int nx, int ny, float dx, float dy)
 
   u.resize((nx + 1) * ny, 0.0f);
   v.resize(nx * (ny + 1), 0.0f);
+}
+
+float MAC2D::u_vel(float x, float y) const {
+  x = std::clamp(x, 0.0f, nx * dx);
+  y = std::clamp(y, dy * 0.5f,
+                 (ny - 0.5f) * dy); // because u velocities are at x-faces
+
+  float gx = x / dx;
+  float gy = (y / dy) - 0.5f;
+
+  int i0 = std::floor(gx);
+  int j0 = std::floor(gy);
+
+  // WARN: does this work?
+  int i1 = std::min(i0 + 1, nx);
+  int j1 = std::min(j0 + 1, ny - 1);
+
+  float tx = gx - i0;
+  float ty = gy - j0;
+
+  return Interpolators::bilinear(u[u_idx(i0, j0)], u[u_idx(i0, j1)],
+                                 u[u_idx(i1, j0)], u[u_idx(i1, j1)], tx, ty);
+}
+
+float MAC2D::v_vel(float x, float y) const {
+  x = std::clamp(x, dx * 0.5f,
+                 (nx - 0.5f) * dx); // because v velocities are at y-faces
+  y = std::clamp(y, 0.0f, ny * dy);
+
+  float gx = (x / dx) - 0.5f;
+  float gy = y / dy;
+
+  int i0 = std::floor(gx);
+  int j0 = std::floor(gy);
+
+  // WARN: does this work?
+  int i1 = std::min(i0 + 1, nx - 1);
+  int j1 = std::min(j0 + 1, ny);
+
+  float tx = gx - i0;
+  float ty = gy - j0;
+
+  return Interpolators::bilinear(v[v_idx(i0, j0)], v[v_idx(i0, j1)],
+                                 v[v_idx(i1, j0)], v[v_idx(i1, j1)], tx, ty);
 }

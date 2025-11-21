@@ -9,6 +9,9 @@ add_executable(Venturi
     src/main.cc
 )
 
+add_subdirectory(src)
+add_subdirectory(tests)
+
 target_include_directories(Venturi
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include

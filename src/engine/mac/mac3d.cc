@@ -1,6 +1,7 @@
 #include "mac3d.h"
+#include "utils/interpolators.h"
 
-MAC3d::MAC3d(int nx, int ny, int nz, float dx, float dy, float dz)
+MAC3D::MAC3D(int nx, int ny, int nz, float dx, float dy, float dz)
     : nx(nx), ny(ny), nz(nz), dx(dx), dy(dy), dz(dz) {
 
   cells.resize(nx * ny * nz);
@@ -32,4 +33,34 @@ MAC3d::MAC3d(int nx, int ny, int nz, float dx, float dy, float dz)
   u.resize((nx + 1) * ny * nz, 0.0f);
   v.resize(nx * (ny + 1) * nz, 0.0f);
   w.resize(nx * ny * (nz + 1), 0.0f);
+}
+
+float MAC3D::u_vel(float x, float y, float z) const {
+  x = std::clamp(x, 0.0f, nx * dx);
+  y = std::clamp(y, dy * 0.5f,
+                 (ny - 0.5f) * dy); // because u velocities are at x-faces
+  z = std::clamp(z, dz * 0.5f,
+                 (nz - 0.5f) * dz); // because u velocities are at x-faces
+
+  float gx = x / dx;
+  float gy = (y / dy) - 0.5f;
+  float gz = (z / dz) - 0.5f;
+
+  int i0 = std::floor(gx);
+  int j0 = std::floor(gy);
+  int k0 = std::floor(gz);
+
+  // WARN: does this work?
+  int i1 = std::min(i0 + 1, nx);
+  int j1 = std::min(j0 + 1, ny - 1);
+  int k1 = std::min(k0 + 1, nz - 1);
+
+  float tx = gx - i0;
+  float ty = gy - j0;
+  float tz = gz - k0;
+
+  return Interpolators::trilinear(
+      u[u_idx(i0, j0, k0)], u[u_idx(i0, j0, k1)], u[u_idx(i0, j1, k0)],
+      u[u_idx(i0, j1, k1)], u[u_idx(i1, j0, k0)], u[u_idx(i1, j0, k1)],
+      u[u_idx(i1, j1, k0)], u[u_idx(i1, j1, k1)], tx, ty, tz);
 }
