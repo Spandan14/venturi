@@ -64,3 +64,63 @@ float MAC3D::u_vel(float x, float y, float z) const {
       u[u_idx(i0, j1, k1)], u[u_idx(i1, j0, k0)], u[u_idx(i1, j0, k1)],
       u[u_idx(i1, j1, k0)], u[u_idx(i1, j1, k1)], tx, ty, tz);
 }
+
+float MAC3D::v_vel(float x, float y, float z) const {
+  x = std::clamp(x, dx * 0.5f,
+                 (nx - 0.5f) * dx); // because v velocities are at y-faces
+  y = std::clamp(y, 0.0f, ny * dy);
+  z = std::clamp(z, dz * 0.5f,
+                 (nz - 0.5f) * dz); // because v velocities are at y-faces
+
+  float gx = (x / dx) - 0.5f;
+  float gy = y / dy;
+  float gz = (z / dz) - 0.5f;
+
+  int i0 = std::floor(gx);
+  int j0 = std::floor(gy);
+  int k0 = std::floor(gz);
+
+  // WARN: does this work?
+  int i1 = std::min(i0 + 1, nx - 1);
+  int j1 = std::min(j0 + 1, ny);
+  int k1 = std::min(k0 + 1, nz - 1);
+
+  float tx = gx - i0;
+  float ty = gy - j0;
+  float tz = gz - k0;
+
+  return Interpolators::trilinear(
+      v[v_idx(i0, j0, k0)], v[v_idx(i0, j0, k1)], v[v_idx(i0, j1, k0)],
+      v[v_idx(i0, j1, k1)], v[v_idx(i1, j0, k0)], v[v_idx(i1, j0, k1)],
+      v[v_idx(i1, j1, k0)], v[v_idx(i1, j1, k1)], tx, ty, tz);
+}
+
+float MAC3D::w_vel(float x, float y, float z) const {
+  x = std::clamp(x, dx * 0.5f,
+                 (nx - 0.5f) * dx); // because w velocities are at z-faces
+  y = std::clamp(y, dy * 0.5f,
+                 (ny - 0.5f) * dy); // because w velocities are at z-faces
+  z = std::clamp(z, 0.0f, nz * dz);
+
+  float gx = (x / dx) - 0.5f;
+  float gy = (y / dy) - 0.5f;
+  float gz = z / dz;
+
+  int i0 = std::floor(gx);
+  int j0 = std::floor(gy);
+  int k0 = std::floor(gz);
+
+  // WARN: does this work?
+  int i1 = std::min(i0 + 1, nx - 1);
+  int j1 = std::min(j0 + 1, ny - 1);
+  int k1 = std::min(k0 + 1, nz);
+
+  float tx = gx - i0;
+  float ty = gy - j0;
+  float tz = gz - k0;
+
+  return Interpolators::trilinear(
+      w[w_idx(i0, j0, k0)], w[w_idx(i0, j0, k1)], w[w_idx(i0, j1, k0)],
+      w[w_idx(i0, j1, k1)], w[w_idx(i1, j0, k0)], w[w_idx(i1, j0, k1)],
+      w[w_idx(i1, j1, k0)], w[w_idx(i1, j1, k1)], tx, ty, tz);
+}
