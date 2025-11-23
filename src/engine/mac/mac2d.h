@@ -14,12 +14,6 @@ struct Cell2D {
   int v_hi_idx;
 };
 
-struct CellData2D {
-  float pressure;
-  vec2d force;
-  float density;
-};
-
 class MAC2D {
 public:
   MAC2D(int nx, int ny, float dx, float dy);
@@ -28,11 +22,16 @@ public:
   int nx, ny;
   float dx, dy;
 
-  float u_vel(float x, float y) const;
-  float v_vel(float x, float y) const;
+  float u_vel(vec2d pos) const;
+  float v_vel(vec2d pos) const;
+
+  float density(vec2d pos) const;
 
   inline int u_idx(int i, int j) const { return i + j * (nx + 1); }
   inline int v_idx(int i, int j) const { return i + j * nx; }
+  inline int idx(int i, int j) const { return i + j * nx; }
+
+  float current_time = 0.0f;
 
   std::vector<Cell2D> cells;
 
@@ -42,6 +41,14 @@ public:
   std::vector<float> v; // y-face velocities
                         // size: nx * (ny + 1)
 
-  std::vector<CellData2D> cell_data; // cell-centered data
-                                     // size: nx * ny
+  std::vector<float> pressures; // cell-centered pressures
+                                // size: nx * ny
+
+  std::vector<vec2d> forces; // cell-centered forces
+                             // size: nx * ny
+
+  std::vector<float> densities; // cell-centered densities
+                                // size: nx * ny
+
+  static vec2d dx_vel_dt(vec2d x, float t, MAC2D &mac);
 };

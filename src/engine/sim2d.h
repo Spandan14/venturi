@@ -18,6 +18,13 @@ private:
 
   IVPSolverType solver = IVPSolverType::EULER;
 
+  void _initialize_forces();
+
   void _advect_velocities(float dt);
   void _advect_u(float dt);
+  void _advect_v(float dt);
+
+  void _advect_cell_data(float dt);
+
+  void _apply_forces(float dt);
 };

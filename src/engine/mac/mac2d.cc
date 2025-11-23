@@ -4,8 +4,14 @@
 MAC2D::MAC2D(int nx, int ny, float dx, float dy)
     : nx(nx), ny(ny), dx(dx), dy(dy) {
 
+  u.resize((nx + 1) * ny, 0.0f);
+  v.resize(nx * (ny + 1), 0.0f);
+
+  pressures.resize(nx * ny, 0.0f);
+  forces.resize(nx * ny, vec2d(0.0, 0.0));
+  densities.resize(nx * ny, 0.0f);
+
   cells.resize(nx * ny);
-  cell_data.resize(nx * ny);
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       int c_idx = i + j * nx;
@@ -17,19 +23,13 @@ MAC2D::MAC2D(int nx, int ny, float dx, float dy)
 
       cell.v_lo_idx = i + j * nx;
       cell.v_hi_idx = i + (j + 1) * nx;
-
-      CellData2D &data = cell_data[c_idx];
-      data.pressure = 0.0f;
-      data.force = vec2d(0.0, 0.0);
-      data.density = 0.0f;
     }
   }
-
-  u.resize((nx + 1) * ny, 0.0f);
-  v.resize(nx * (ny + 1), 0.0f);
 }
 
-float MAC2D::u_vel(float x, float y) const {
+float MAC2D::u_vel(vec2d pos) const {
+  float x = pos[0], y = pos[1];
+
   x = std::clamp(x, 0.0f, nx * dx);
   y = std::clamp(y, dy * 0.5f,
                  (ny - 0.5f) * dy); // because u velocities are at x-faces
@@ -51,7 +51,9 @@ float MAC2D::u_vel(float x, float y) const {
                                  u[u_idx(i1, j0)], u[u_idx(i1, j1)], tx, ty);
 }
 
-float MAC2D::v_vel(float x, float y) const {
+float MAC2D::v_vel(vec2d pos) const {
+  float x = pos[0], y = pos[1];
+
   x = std::clamp(x, dx * 0.5f,
                  (nx - 0.5f) * dx); // because v velocities are at y-faces
   y = std::clamp(y, 0.0f, ny * dy);
@@ -71,4 +73,34 @@ float MAC2D::v_vel(float x, float y) const {
 
   return Interpolators::bilinear(v[v_idx(i0, j0)], v[v_idx(i0, j1)],
                                  v[v_idx(i1, j0)], v[v_idx(i1, j1)], tx, ty);
+}
+
+float MAC2D::density(vec2d pos) const {
+  float x = pos[0], y = pos[1];
+
+  x = std::clamp(x, 0.0f + 0.5f * dx, (nx - 0.5f) * dx);
+  y = std::clamp(y, 0.0f + 0.5f * dy, (ny - 0.5f) * dy);
+
+  float gx = (x / dx) - 0.5f;
+  float gy = (y / dy) - 0.5f;
+
+  int i0 = std::floor(gx);
+  int j0 = std::floor(gy);
+
+  // WARN: does this work?
+  int i1 = std::min(i0 + 1, nx - 1);
+  int j1 = std::min(j0 + 1, ny - 1);
+
+  float tx = gx - i0;
+  float ty = gy - j0;
+
+  return Interpolators::bilinear(densities[idx(i0, j0)], densities[idx(i0, j1)],
+                                 densities[idx(i1, j0)], densities[idx(i1, j1)],
+                                 tx, ty);
+}
+
+vec2d MAC2D::dx_vel_dt(vec2d x, float t, MAC2D &mac) {
+  float u = mac.u_vel(x);
+  float v = mac.v_vel(x);
+  return -1.f * vec2d(u, v);
 }
