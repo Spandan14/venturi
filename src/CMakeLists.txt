@@ -1,6 +1,7 @@
 add_subdirectory(engine)
 add_subdirectory(solver)
 add_subdirectory(utils)
+add_subdirectory(renderer)
 
 add_executable(Venturi
     main.cc
@@ -13,5 +14,6 @@ target_link_libraries(Venturi
         engine
         solver
         utils
+        renderer
         Eigen3::Eigen
 )

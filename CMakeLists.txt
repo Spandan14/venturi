@@ -13,6 +13,7 @@ target_include_directories(Venturi
         ${PROJECT_SOURCE_DIR}/include
 )
 
+
 find_package(Eigen3 REQUIRED NO_MODULE)
 target_link_libraries(Venturi PRIVATE Eigen3::Eigen)
 
