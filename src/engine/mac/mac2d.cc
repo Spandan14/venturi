@@ -27,7 +27,7 @@ MAC2D::MAC2D(int nx, int ny, float dx, float dy)
   }
 }
 
-float MAC2D::u_vel(vec2d pos) const {
+float MAC2D::vel_u(vec2d pos) const {
   float x = pos[0], y = pos[1];
 
   x = std::clamp(x, 0.0f, nx * dx);
@@ -51,7 +51,7 @@ float MAC2D::u_vel(vec2d pos) const {
                                  u[u_idx(i1, j0)], u[u_idx(i1, j1)], tx, ty);
 }
 
-float MAC2D::v_vel(vec2d pos) const {
+float MAC2D::vel_v(vec2d pos) const {
   float x = pos[0], y = pos[1];
 
   x = std::clamp(x, dx * 0.5f,
@@ -100,7 +100,5 @@ float MAC2D::density(vec2d pos) const {
 }
 
 vec2d MAC2D::dx_vel_dt(vec2d x, float t, MAC2D &mac) {
-  float u = mac.u_vel(x);
-  float v = mac.v_vel(x);
-  return -1.f * vec2d(u, v);
+  return -1.f * mac.vel(x);
 }

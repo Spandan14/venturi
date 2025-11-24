@@ -22,8 +22,10 @@ public:
   int nx, ny;
   float dx, dy;
 
-  float u_vel(vec2d pos) const;
-  float v_vel(vec2d pos) const;
+  float vel_u(vec2d pos) const;
+  float vel_v(vec2d pos) const;
+
+  inline vec2d vel(vec2d pos) const { return vec2d(vel_u(pos), vel_v(pos)); }
 
   float density(vec2d pos) const;
 

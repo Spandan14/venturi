@@ -49,7 +49,7 @@ void Simulation2D::_advect_u(float dt) {
           solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
 
       // interpolate the velocity at the original position
-      mac_next.u[mac.u_idx(i, j)] = mac.u_vel(x_orig);
+      mac_next.u[mac.u_idx(i, j)] = mac.vel_u(x_orig);
     }
   }
 }
@@ -67,7 +67,7 @@ void Simulation2D::_advect_v(float dt) {
           solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
 
       // interpolate the velocity at the original position
-      mac_next.v[mac.v_idx(i, j)] = mac.v_vel(x_orig);
+      mac_next.v[mac.v_idx(i, j)] = mac.vel_v(x_orig);
     }
   }
 }
@@ -91,4 +91,34 @@ void Simulation2D::_advect_cell_data(float dt) {
   }
 }
 
-void Simulation2D::_apply_forces(float dt) {}
+void Simulation2D::_apply_forces(float dt) {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx + 1; ++i) { // u-grid
+      float force = 0.0f;
+      if (i > 0) {
+        force += mac.forces[mac.idx(i - 1, j)][0];
+      }
+      if (i < nx) {
+        force += mac.forces[mac.idx(i, j)][0];
+      }
+      force *= 0.5f;
+
+      mac_next.u[mac.u_idx(i, j)] += force * dt;
+    }
+  }
+
+  for (int j = 0; j < ny + 1; ++j) {
+    for (int i = 0; i < nx; ++i) { // v-grid
+      float force = 0.0f;
+      if (j > 0) {
+        force += mac.forces[mac.idx(i, j - 1)][1];
+      }
+      if (j < ny) {
+        force += mac.forces[mac.idx(i, j)][1];
+      }
+      force *= 0.5f;
+
+      mac_next.v[mac.v_idx(i, j)] += force * dt;
+    }
+  }
+}

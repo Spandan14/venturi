@@ -28,8 +28,8 @@ int test_one() {
       float u_exact = x + 2 * y;
       float v_exact = -x + y;
 
-      float u_interp = mac.u_vel(x, y);
-      float v_interp = mac.v_vel(x, y);
+      float u_interp = mac.vel_u({x, y});
+      float v_interp = mac.vel_v({x, y});
 
       assert(std::abs(u_interp - u_exact) < 1e-6f);
       assert(std::abs(v_interp - v_exact) < 1e-6f);
