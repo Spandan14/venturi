@@ -1,7 +1,7 @@
 #include <engine/mac/mac2d.h>
 #include <engine/sim2d.h>
-#include <iostream>
 #include <renderer/renderer_2d.h>
+#include <utils/physical_consts.h>
 
 int main() {
   Simulation2D sim = Simulation2D(220, 100, 0.1, 0.1);
@@ -14,7 +14,9 @@ int main() {
     }
   };
 
-  auto force_init = [](int i, int j) { return vec2d(0.0f, -9.81f); };
+  auto force_init = [](int i, int j) {
+    return vec2d(0.0f, -GRAVITATIONAL_ACCL);
+  };
 
   auto vel_u_init = [](int i, int j) { return 0.3 * (j - 50); };
 

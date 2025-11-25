@@ -1,4 +1,5 @@
 #include "sim2d.h"
+#include <iostream>
 #include <utils/physical_consts.h>
 
 Simulation2D::Simulation2D(int nx, int ny, float dx, float dy)
@@ -6,12 +7,25 @@ Simulation2D::Simulation2D(int nx, int ny, float dx, float dy)
       dy(dy) {}
 
 void Simulation2D::step(float dt) {
+  float total_density = 0.0f;
+  for (float d : mac.densities) {
+    total_density += d;
+  }
+
+  std::cout << "Total Density: " << total_density << std::endl;
+
   _advect_velocities(dt);
+  _apply_forces(dt);
+
   _advect_cell_data(dt);
 
   mac_next.current_time += dt;
 
-  _apply_forces(dt);
+  total_density = 0.0f;
+  for (float d : mac_next.densities) {
+    total_density += d;
+  }
+  std::cout << "Total Density After Step: " << total_density << std::endl;
 
   // everything has now ended up in mac_next, so we swap
   std::swap(mac, mac_next);
@@ -107,7 +121,7 @@ void Simulation2D::_advect_cell_data(float dt) {
 
       // solve for original position
       vec2d x_orig = IVPSolvers<vec2d, MAC2D &>::solveIVP(
-          solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
+          solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac_next);
 
       // interpolate the cell data at the original position
       // for now, just density
