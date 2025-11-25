@@ -8,10 +8,10 @@ int main() {
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {
-    if (j < 30 && j > 10 && i >= 50 && i < 170) {
+    if (j < 30 && j > 20 && i >= 80 && i < 140) {
       return 1.0f;
     } else {
-      return 0.2f;
+      return 0.07f;
     }
     // return 0.2f;
   };
@@ -67,17 +67,17 @@ int main() {
 
   sim.initialize_density(density_init);
   sim.initialize_forces(force_init);
-  // sim.initialize_vel_u(vel_u_init);
-  // sim.initialize_vel_v(vel_v_init);
+  sim.initialize_vel_u(vel_u_init);
+  sim.initialize_vel_v(vel_v_init);
 
   Renderer2D renderer = Renderer2D(sim.get_mac(), 1760, 800);
 
   auto last_frame = std::chrono::high_resolution_clock::now();
   while (renderer.should_draw()) {
     auto this_frame = std::chrono::high_resolution_clock::now();
-    // sim.step(std::chrono::duration<float>(this_frame - last_frame).count());
+    sim.step(std::chrono::duration<float>(this_frame - last_frame).count());
     // if (sim.get_mac().current_time <= 0.001f) {
-    sim.step(0.01f);
+    // sim.step(0.01f);
     // }
     // std::cout << "Frame Time: "
     //           << std::chrono::duration<float, std::milli>(this_frame -

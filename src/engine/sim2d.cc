@@ -201,8 +201,11 @@ void Simulation2D::_pressure_solve(float dt) {
     for (int i = 0; i < nx; ++i) {
       int c_idx = mac.idx(i, j);
       if (fluid_idx[c_idx] != -1) {
-        // std::cout << "Pressure at (" << i << ", " << j
-        //           << "): " << pressure[fluid_idx[c_idx]] << std::endl;
+        if (j == 0) {
+
+          std::cout << "Pressure at (" << i << ", " << j
+                    << "): " << pressure[fluid_idx[c_idx]] << std::endl;
+        }
         mac_next.pressures[c_idx] = pressure[fluid_idx[c_idx]];
       } else {
         mac_next.pressures[c_idx] = 0.0f;
@@ -306,7 +309,7 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
           rho = mac.densities[c_idx_bottom];
         }
 
-        float correction = (p_bottom - p_top) * (dt / rho);
+        float correction = (p_top - p_bottom) * (dt / rho);
         correction /= mac.dy;
 
         // std::cout << "Original v at (" << i << ", " << j
