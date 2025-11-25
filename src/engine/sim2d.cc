@@ -3,9 +3,7 @@
 
 Simulation2D::Simulation2D(int nx, int ny, float dx, float dy)
     : mac(nx, ny, dx, dy), mac_next(nx, ny, dx, dy), nx(nx), ny(ny), dx(dx),
-      dy(dy) {
-  _initialize_forces();
-}
+      dy(dy) {}
 
 void Simulation2D::step(float dt) {
   _advect_velocities(dt);
@@ -19,11 +17,38 @@ void Simulation2D::step(float dt) {
   std::swap(mac, mac_next);
 }
 
-void Simulation2D::_initialize_forces() {
-  // just gravity for now
+void Simulation2D::initialize_vel_u(
+    const std::function<float(int, int)> &initializer) {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx + 1; ++i) {
+      mac.u[mac.u_idx(i, j)] = initializer(i, j);
+    }
+  }
+}
+
+void Simulation2D::initialize_vel_v(
+    const std::function<float(int, int)> &initializer) {
+  for (int j = 0; j < ny + 1; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      mac.v[mac.v_idx(i, j)] = initializer(i, j);
+    }
+  }
+}
+
+void Simulation2D::initialize_density(
+    const std::function<float(int, int)> &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
-      mac.forces[mac.idx(i, j)] = vec2d(0.0f, -GRAVITATIONAL_ACCL);
+      mac.densities[mac.idx(i, j)] = initializer(i, j);
+    }
+  }
+}
+
+void Simulation2D::initialize_forces(
+    const std::function<vec2d(int, int)> &initializer) {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      mac.forces[mac.idx(i, j)] = initializer(i, j);
     }
   }
 }

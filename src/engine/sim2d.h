@@ -8,6 +8,12 @@ public:
   ~Simulation2D() = default;
 
   void step(float dt);
+  [[nodiscard]] const MAC2D &get_mac() const { return mac; }
+
+  void initialize_vel_u(const std::function<float(int, int)> &initializer);
+  void initialize_vel_v(const std::function<float(int, int)> &initializer);
+  void initialize_density(const std::function<float(int, int)> &initializer);
+  void initialize_forces(const std::function<vec2d(int, int)> &initializer);
 
 private:
   MAC2D mac;
@@ -17,8 +23,6 @@ private:
   float dx, dy;
 
   IVPSolverType solver = IVPSolverType::EULER;
-
-  void _initialize_forces();
 
   void _advect_velocities(float dt);
   void _advect_u(float dt);

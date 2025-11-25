@@ -11,7 +11,7 @@ target_include_directories(renderer
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(OpenGL REQUIRED)
 find_package(GLFW3 REQUIRED)
-
+# find_package(GLEW REQUIRED)
 
 # find the slang library
 find_library(SLANG_LIB
@@ -26,4 +26,5 @@ target_link_libraries(renderer PUBLIC
     ${SLANG_LIB}
     OpenGL::GL
     glfw
+    /opt/homebrew/lib/libGLEW.dylib
     Eigen3::Eigen)
