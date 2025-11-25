@@ -27,7 +27,7 @@ private:
   int nx, ny;
   float dx, dy;
 
-  IVPSolverType ivp_solver = IVPSolverType::EULER;
+  IVPSolverType ivp_solver = IVPSolverType::RK4;
   PressureSolverType pressure_solver = PressureSolverType::ICCG;
 
   void _apply_forces(float dt);

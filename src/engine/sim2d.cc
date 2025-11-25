@@ -39,6 +39,7 @@ void Simulation2D::initialize_vel_u(
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx + 1; ++i) {
       mac.u[mac.u_idx(i, j)] = initializer(i, j);
+      mac_next.u[mac.u_idx(i, j)] = initializer(i, j);
     }
   }
 }
@@ -48,6 +49,7 @@ void Simulation2D::initialize_vel_v(
   for (int j = 0; j < ny + 1; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.v[mac.v_idx(i, j)] = initializer(i, j);
+      mac_next.v[mac.v_idx(i, j)] = initializer(i, j);
     }
   }
 }
@@ -57,6 +59,7 @@ void Simulation2D::initialize_density(
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.densities[mac.idx(i, j)] = initializer(i, j);
+      mac_next.densities[mac.idx(i, j)] = initializer(i, j);
     }
   }
 }
@@ -66,6 +69,7 @@ void Simulation2D::initialize_forces(
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.forces[mac.idx(i, j)] = initializer(i, j);
+      mac_next.forces[mac.idx(i, j)] = initializer(i, j);
     }
   }
 }
@@ -75,6 +79,7 @@ void Simulation2D::initialize_solids(
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.is_solid[mac.idx(i, j)] = initializer(i, j);
+      mac_next.is_solid[mac.idx(i, j)] = initializer(i, j);
     }
   }
 }
@@ -168,6 +173,13 @@ void Simulation2D::_pressure_solve(float dt) {
     }
   }
 
+  std::cout << "Fluid Cell Count: " << fluid_count << std::endl;
+
+  if (fluid_count == 0) {
+    // no fluid cells, nothing to do
+    return;
+  }
+
   Eigen::VectorXd divergence = _build_divergence(fluid_idx, fluid_count);
   Eigen::SparseMatrix<double> A =
       _build_pressure_matrix(fluid_idx, fluid_count);
@@ -189,6 +201,8 @@ void Simulation2D::_pressure_solve(float dt) {
     for (int i = 0; i < nx; ++i) {
       int c_idx = mac.idx(i, j);
       if (fluid_idx[c_idx] != -1) {
+        // std::cout << "Pressure at (" << i << ", " << j
+        //           << "): " << pressure[fluid_idx[c_idx]] << std::endl;
         mac_next.pressures[c_idx] = pressure[fluid_idx[c_idx]];
       } else {
         mac_next.pressures[c_idx] = 0.0f;
@@ -204,7 +218,12 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
                                        float dt) {
   // u faces
   for (int j = 0; j < ny; ++j) {
-    for (int i = 1; i < nx; ++i) { // internal faces only
+    for (int i = 0; i < nx + 1; ++i) { // internal faces only
+      if (i == 0 || i == nx) {
+        mac_next.u[mac.u_idx(i, j)] = 0.0f;
+        continue;
+      }
+
       int c_idx_left = mac.idx(i - 1, j);
       int c_idx_right = mac.idx(i, j);
 
@@ -217,6 +236,7 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
       // if (left_valid || right_valid) {
       if (left_non_solid && right_non_solid) {
         if (!left_valid && !right_valid) {
+          mac_next.u[mac.u_idx(i, j)] = 0.0f;
           continue; // both are air
         }
 
@@ -225,31 +245,49 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
         float p_right = right_valid ? pressure[fluid_idx[c_idx_right]] : 0.0f;
 
         // average density
-        float rho =
-            0.5f * (mac.densities[c_idx_left] + mac.densities[c_idx_right]);
+        float rho;
+        if (left_valid && right_valid) {
+          rho = 0.5f * (mac.densities[c_idx_left] + mac.densities[c_idx_right]);
+        } else if (left_valid) {
+          rho = mac.densities[c_idx_left];
+        } else {
+          rho = mac.densities[c_idx_right];
+        }
 
         float correction = (p_right - p_left) * (dt / rho);
         correction /= mac.dx;
 
         mac_next.u[mac.u_idx(i, j)] -= correction;
+      } else if (left_non_solid || right_non_solid) {
+        // one side is solid, set to 0
+        mac_next.u[mac.u_idx(i, j)] = 0.0f;
       }
+      //   mac_next.u[mac.u_idx(i, j)] = 0.0f;
+      // }
     }
   }
 
   // v faces
-  for (int j = 1; j < ny; ++j) {
+  for (int j = 0; j < ny + 1; ++j) {
     for (int i = 0; i < nx; ++i) {
-      int c_idx_top = mac.idx(i, j - 1);
-      int c_idx_bottom = mac.idx(i, j);
+      if (j == 0 || j == ny) {
+        mac_next.v[mac.v_idx(i, j)] = 0.0f;
+        continue;
+      }
 
-      bool top_valid = (fluid_idx[c_idx_top] != -1);
+      int c_idx_bottom = mac.idx(i, j - 1);
+      int c_idx_top = mac.idx(i, j);
+
       bool bottom_valid = (fluid_idx[c_idx_bottom] != -1);
+      bool top_valid = (fluid_idx[c_idx_top] != -1);
 
-      bool top_non_solid = mac_next.get_cell_type(i, j - 1) != CellType::SOLID;
-      bool bottom_non_solid = mac_next.get_cell_type(i, j) != CellType::SOLID;
+      bool bottom_non_solid =
+          mac_next.get_cell_type(i, j - 1) != CellType::SOLID;
+      bool top_non_solid = mac_next.get_cell_type(i, j) != CellType::SOLID;
 
       if (top_non_solid && bottom_non_solid) {
         if (!top_valid && !bottom_valid) {
+          mac_next.v[mac.v_idx(i, j)] = 0.0f;
           continue; // both are air
         }
 
@@ -259,14 +297,31 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
             bottom_valid ? pressure[fluid_idx[c_idx_bottom]] : 0.0f;
 
         // average density
-        float rho =
-            0.5f * (mac.densities[c_idx_top] + mac.densities[c_idx_bottom]);
+        float rho;
+        if (top_valid && bottom_valid) {
+          rho = 0.5f * (mac.densities[c_idx_top] + mac.densities[c_idx_bottom]);
+        } else if (top_valid) {
+          rho = mac.densities[c_idx_top];
+        } else {
+          rho = mac.densities[c_idx_bottom];
+        }
 
         float correction = (p_bottom - p_top) * (dt / rho);
         correction /= mac.dy;
 
+        // std::cout << "Original v at (" << i << ", " << j
+        //           << "): " << mac_next.v[mac.v_idx(i, j)] << std::endl;
+        // std::cout << "p_top: " << p_top << ", p_bottom: " << p_bottom
+        //           << ", rho: " << rho << ", dt: " << dt << std::endl;
+        // std::cout << "Correction: " << correction << std::endl;
+
         mac_next.v[mac.v_idx(i, j)] -= correction;
+      } else if (top_non_solid || bottom_non_solid) {
+        // one side is solid, set to 0
+        mac_next.v[mac.v_idx(i, j)] = 0.0f;
       }
+      //   mac_next.v[mac.v_idx(i, j)] = 0.0f;
+      // }
     }
   }
 }
@@ -287,12 +342,23 @@ Simulation2D::_build_divergence(const std::vector<int> &fluid_idx,
 
       // NOTE: KEY to use new vel here
       // u velocities
-      div += mac_next.u[mac.u_idx(i + 1, j)]; // right face
-      div -= mac_next.u[mac.u_idx(i, j)];     // left face
+      // div += mac_next.u[mac.u_idx(i + 1, j)]; // right face
+      div += mac.get_cell_type(i + 1, j) != CellType::FLUID
+                 ? 0.0f
+                 : mac_next.u[mac.u_idx(i + 1, j)]; // right face
+
+      div -= mac.get_cell_type(i - 1, j) != CellType::FLUID
+                 ? 0.0f
+                 : mac_next.u[mac.u_idx(i, j)]; // left face
 
       // v velocities
-      div += mac_next.v[mac.v_idx(i, j + 1)]; // top face
-      div -= mac_next.v[mac.v_idx(i, j)];     // bottom face
+      div += mac.get_cell_type(i, j + 1) != CellType::FLUID
+                 ? 0.0f
+                 : mac_next.v[mac.v_idx(i, j + 1)]; // top face
+
+      div -= mac.get_cell_type(i, j - 1) != CellType::FLUID
+                 ? 0.0f
+                 : mac_next.v[mac.v_idx(i, j)]; // bottom face
 
       divergence[fluid_idx[c_idx]] = -div / mac.dx; // negative for RHS
     }
@@ -364,15 +430,4 @@ void Simulation2D::_advect_cell_data(float dt) {
       mac_next.densities[mac.idx(i, j)] = mac.density(x_orig);
     }
   }
-}
-
-CellType MAC2D::get_cell_type(int i, int j) const {
-  // for now, everything is fluid
-  if (is_solid[idx(i, j)])
-    return CellType::SOLID;
-
-  if (densities[idx(i, j)] > 0.0f)
-    return CellType::FLUID;
-
-  return CellType::AIR;
 }

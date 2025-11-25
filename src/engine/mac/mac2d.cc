@@ -104,3 +104,17 @@ float MAC2D::density(vec2d pos) const {
 vec2d MAC2D::dx_vel_dt(vec2d x, float t, MAC2D &mac) {
   return -1.f * mac.vel(x);
 }
+
+CellType MAC2D::get_cell_type(int i, int j) const {
+  if (i < 0 || i >= nx || j < 0 || j >= ny)
+    return CellType::SOLID; // out of bounds treated as solid
+
+  // for now, everything is fluid
+  if (is_solid[idx(i, j)])
+    return CellType::SOLID;
+
+  if (densities[idx(i, j)] > 0.0f)
+    return CellType::FLUID;
+
+  return CellType::AIR;
+}
