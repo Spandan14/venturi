@@ -1,8 +1,11 @@
 #pragma once
 
+#include <Eigen/Core>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <engine/mac/mac2d.h>
+
+typedef Eigen::Vector3f vec3d;
 
 class Renderer2D {
 public:

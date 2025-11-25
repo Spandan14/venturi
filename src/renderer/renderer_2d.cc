@@ -1,4 +1,5 @@
 #include "renderer_2d.h"
+#include "utils/interpolators.h"
 
 Renderer2D::Renderer2D(const MAC2D &mac, int screen_width, int screen_height)
     : mac(mac), screen_width(screen_width), screen_height(screen_height),
@@ -64,7 +65,15 @@ void Renderer2D::_draw_sim() {
           vec2d(0.5f * (mac.u[cell.u_lo_idx] + mac.u[cell.u_hi_idx]),
                 0.5f * (mac.v[cell.v_lo_idx] + mac.v[cell.v_hi_idx]));
 
-      _draw_quad(x0, y0, x1, y1, d, d, d);
+      vec3d u_color = Interpolators::linear(
+          vec3d(0.0f, 0.0f, 1.0f), vec3d(1.0f, 0.0f, 0.0f), cell_vel[0]);
+
+      vec3d v_color = Interpolators::linear(
+          vec3d(0.0f, 0.0f, 1.0), vec3d(1.0f, 0.0f, 0.0), cell_vel[1]);
+
+      vec3d color = d * 0.5f * (u_color + v_color);
+
+      _draw_quad(x0, y0, x1, y1, color[0], 0.0f, color[2]);
       _draw_outline(x0, y0, x1, y1);
     }
   }

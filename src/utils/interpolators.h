@@ -1,6 +1,13 @@
 #pragma once
 
+#include <Eigen/Core>
+
 namespace Interpolators {
+
+// requires x in [0, 1]
+template <typename T> T linear(T q0, T q1, float x) {
+  return q0 * (1 - x) + q1 * x;
+}
 
 // requires x, y in [0, 1]
 template <typename T> T bilinear(T q11, T q12, T q21, T q22, float x, float y) {

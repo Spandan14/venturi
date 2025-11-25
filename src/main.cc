@@ -33,6 +33,7 @@ int main() {
   while (renderer.should_draw()) {
     auto this_frame = std::chrono::high_resolution_clock::now();
     sim.step(std::chrono::duration<float>(this_frame - last_frame).count());
+    // sim.step(0.004f);
     // std::cout << "Frame Time: "
     //           << std::chrono::duration<float, std::milli>(this_frame -
     //                                                       last_frame)
