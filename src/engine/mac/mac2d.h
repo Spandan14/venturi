@@ -14,6 +14,8 @@ struct Cell2D {
   int v_hi_idx;
 };
 
+enum class CellType { FLUID, SOLID, AIR };
+
 class MAC2D {
 public:
   MAC2D(int nx, int ny, float dx, float dy);
@@ -34,8 +36,11 @@ public:
   inline int idx(int i, int j) const { return i + j * nx; }
 
   float current_time = 0.0f;
+  CellType get_cell_type(int i, int j) const;
 
   std::vector<Cell2D> cells;
+  std::vector<bool> is_solid; // cell-centered solid flags
+                              // size: nx * ny
 
   std::vector<float> u; // x-face velocities
                         // size: (nx + 1) * ny

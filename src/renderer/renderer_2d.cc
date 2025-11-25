@@ -66,14 +66,15 @@ void Renderer2D::_draw_sim() {
                 0.5f * (mac.v[cell.v_lo_idx] + mac.v[cell.v_hi_idx]));
 
       vec3d u_color = Interpolators::linear(
-          vec3d(0.0f, 0.0f, 1.0f), vec3d(1.0f, 0.0f, 0.0f), cell_vel[0]);
+          vec3d(0.0f, 0.0f, 1.0f), vec3d(1.0f, 0.0f, 0.0f), cell_vel[0] / 100);
 
       vec3d v_color = Interpolators::linear(
-          vec3d(0.0f, 0.0f, 1.0), vec3d(1.0f, 0.0f, 0.0), cell_vel[1]);
+          vec3d(0.0f, 0.0f, 1.0), vec3d(1.0f, 0.0f, 0.0), cell_vel[1] / 100);
 
-      vec3d color = d * 0.5f * (u_color + v_color);
+      vec3d color = 0.5f * d * (u_color + v_color);
+      color = {d, d, d};
 
-      _draw_quad(x0, y0, x1, y1, color[0], 0.0f, color[2]);
+      _draw_quad(x0, y0, x1, y1, color[0], color[1], color[2]);
       _draw_outline(x0, y0, x1, y1);
     }
   }

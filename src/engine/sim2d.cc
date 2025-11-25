@@ -1,4 +1,5 @@
 #include "sim2d.h"
+#include "solver/iccg.h"
 #include <iostream>
 #include <utils/physical_consts.h>
 
@@ -14,8 +15,10 @@ void Simulation2D::step(float dt) {
 
   std::cout << "Total Density: " << total_density << std::endl;
 
-  _advect_velocities(dt);
-  _apply_forces(dt);
+  _apply_forces(dt);      // will apply forces in mac
+  _advect_velocities(dt); // will store advected velocities in mac_next
+
+  _pressure_solve(dt);
 
   _advect_cell_data(dt);
 
@@ -67,6 +70,47 @@ void Simulation2D::initialize_forces(
   }
 }
 
+void Simulation2D::initialize_solids(
+    const std::function<bool(int, int)> &initializer) {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      mac.is_solid[mac.idx(i, j)] = initializer(i, j);
+    }
+  }
+}
+
+void Simulation2D::_apply_forces(float dt) {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx + 1; ++i) { // u-grid
+      float force = 0.0f;
+      if (i > 0) {
+        force += mac.forces[mac.idx(i - 1, j)][0];
+      }
+      if (i < nx) {
+        force += mac.forces[mac.idx(i, j)][0];
+      }
+      force *= 0.5f;
+
+      mac.u[mac.u_idx(i, j)] += force * dt;
+    }
+  }
+
+  for (int j = 0; j < ny + 1; ++j) {
+    for (int i = 0; i < nx; ++i) { // v-grid
+      float force = 0.0f;
+      if (j > 0) {
+        force += mac.forces[mac.idx(i, j - 1)][1];
+      }
+      if (j < ny) {
+        force += mac.forces[mac.idx(i, j)][1];
+      }
+      force *= 0.5f;
+
+      mac.v[mac.v_idx(i, j)] += force * dt;
+    }
+  }
+}
+
 // advects velocities using the semi-Lagrangian methods
 // looks at every destination velocity grid point by axis, solves for the
 // original, and advects new velocity
@@ -85,7 +129,7 @@ void Simulation2D::_advect_u(float dt) {
 
       // solve for original position
       vec2d x_orig = IVPSolvers<vec2d, MAC2D &>::solveIVP(
-          solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
+          ivp_solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
 
       // interpolate the velocity at the original position
       mac_next.u[mac.u_idx(i, j)] = mac.vel_u(x_orig);
@@ -103,12 +147,204 @@ void Simulation2D::_advect_v(float dt) {
 
       // solve for original position
       vec2d x_orig = IVPSolvers<vec2d, MAC2D &>::solveIVP(
-          solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
+          ivp_solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac);
 
       // interpolate the velocity at the original position
       mac_next.v[mac.v_idx(i, j)] = mac.vel_v(x_orig);
     }
   }
+}
+
+void Simulation2D::_pressure_solve(float dt) {
+  std::vector<int> fluid_idx(nx * ny, -1);
+  int fluid_count = 0;
+
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      if (mac.get_cell_type(i, j) == CellType::FLUID) {
+        fluid_idx[mac.idx(i, j)] = fluid_count;
+        fluid_count++;
+      }
+    }
+  }
+
+  Eigen::VectorXd divergence = _build_divergence(fluid_idx, fluid_count);
+  Eigen::SparseMatrix<double> A =
+      _build_pressure_matrix(fluid_idx, fluid_count);
+
+  Eigen::VectorXd pressure(fluid_count);
+
+  switch (pressure_solver) {
+
+  case PressureSolverType::ICCG: {
+    ICCGSolver pcg_solver = ICCGSolver(1000, 1e-6f);
+    pressure = pcg_solver.solve(divergence, A);
+    break;
+  }
+  default:
+    throw std::runtime_error("[SIMULATION] Unsupported pressure solver type.");
+  }
+
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      int c_idx = mac.idx(i, j);
+      if (fluid_idx[c_idx] != -1) {
+        mac_next.pressures[c_idx] = pressure[fluid_idx[c_idx]];
+      } else {
+        mac_next.pressures[c_idx] = 0.0f;
+      }
+    }
+  }
+
+  _project_velocities(pressure, fluid_idx, dt);
+}
+
+void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
+                                       const std::vector<int> &fluid_idx,
+                                       float dt) {
+  // u faces
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 1; i < nx; ++i) { // internal faces only
+      int c_idx_left = mac.idx(i - 1, j);
+      int c_idx_right = mac.idx(i, j);
+
+      bool left_valid = (fluid_idx[c_idx_left] != -1);
+      bool right_valid = (fluid_idx[c_idx_right] != -1);
+
+      bool left_non_solid = mac_next.get_cell_type(i - 1, j) != CellType::SOLID;
+      bool right_non_solid = mac_next.get_cell_type(i, j) != CellType::SOLID;
+
+      // if (left_valid || right_valid) {
+      if (left_non_solid && right_non_solid) {
+        if (!left_valid && !right_valid) {
+          continue; // both are air
+        }
+
+        // air always has 0 pressure
+        float p_left = left_valid ? pressure[fluid_idx[c_idx_left]] : 0.0f;
+        float p_right = right_valid ? pressure[fluid_idx[c_idx_right]] : 0.0f;
+
+        // average density
+        float rho =
+            0.5f * (mac.densities[c_idx_left] + mac.densities[c_idx_right]);
+
+        float correction = (p_right - p_left) * (dt / rho);
+        correction /= mac.dx;
+
+        mac_next.u[mac.u_idx(i, j)] -= correction;
+      }
+    }
+  }
+
+  // v faces
+  for (int j = 1; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      int c_idx_top = mac.idx(i, j - 1);
+      int c_idx_bottom = mac.idx(i, j);
+
+      bool top_valid = (fluid_idx[c_idx_top] != -1);
+      bool bottom_valid = (fluid_idx[c_idx_bottom] != -1);
+
+      bool top_non_solid = mac_next.get_cell_type(i, j - 1) != CellType::SOLID;
+      bool bottom_non_solid = mac_next.get_cell_type(i, j) != CellType::SOLID;
+
+      if (top_non_solid && bottom_non_solid) {
+        if (!top_valid && !bottom_valid) {
+          continue; // both are air
+        }
+
+        // air always has 0 pressure
+        float p_top = top_valid ? pressure[fluid_idx[c_idx_top]] : 0.0f;
+        float p_bottom =
+            bottom_valid ? pressure[fluid_idx[c_idx_bottom]] : 0.0f;
+
+        // average density
+        float rho =
+            0.5f * (mac.densities[c_idx_top] + mac.densities[c_idx_bottom]);
+
+        float correction = (p_bottom - p_top) * (dt / rho);
+        correction /= mac.dy;
+
+        mac_next.v[mac.v_idx(i, j)] -= correction;
+      }
+    }
+  }
+}
+
+Eigen::VectorXd
+Simulation2D::_build_divergence(const std::vector<int> &fluid_idx,
+                                int fluid_count) {
+  Eigen::VectorXd divergence(fluid_count);
+
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      int c_idx = mac.idx(i, j);
+      if (fluid_idx[c_idx] == -1) {
+        continue; // not a fluid cell
+      }
+
+      float div = 0.0f;
+
+      // NOTE: KEY to use new vel here
+      // u velocities
+      div += mac_next.u[mac.u_idx(i + 1, j)]; // right face
+      div -= mac_next.u[mac.u_idx(i, j)];     // left face
+
+      // v velocities
+      div += mac_next.v[mac.v_idx(i, j + 1)]; // top face
+      div -= mac_next.v[mac.v_idx(i, j)];     // bottom face
+
+      divergence[fluid_idx[c_idx]] = -div / mac.dx; // negative for RHS
+    }
+  }
+
+  return divergence;
+}
+
+Eigen::SparseMatrix<double>
+Simulation2D::_build_pressure_matrix(const std::vector<int> &fluid_idx,
+                                     int fluid_count) {
+  std::vector<Eigen::Triplet<double>> triplet_list;
+
+  float inv_dx2 = 1.0f / (mac.dx * mac.dx);
+
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      int c_idx = mac.idx(i, j);
+      if (fluid_idx[c_idx] == -1) {
+        continue; // not a fluid cell
+      }
+
+      int mat_row = fluid_idx[c_idx];
+      int neighbor_count = 0;
+
+      // check neighbors
+      const std::vector<std::pair<int, int>> neighbors = {
+          {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+      for (const auto &[di, dj] : neighbors) {
+        int ni = i + di;
+        int nj = j + dj;
+
+        if (ni >= 0 && ni < nx && nj >= 0 && nj < ny) {
+          int n_idx = mac.idx(ni, nj);
+          if (fluid_idx[n_idx] != -1) {
+            // fluid neighbor
+            triplet_list.emplace_back(mat_row, fluid_idx[n_idx], -inv_dx2);
+            neighbor_count++;
+          }
+        }
+      }
+
+      // diagonal entry
+      triplet_list.emplace_back(mat_row, mat_row,
+                                static_cast<double>(neighbor_count) * inv_dx2);
+    }
+  }
+
+  Eigen::SparseMatrix<double> A(fluid_count, fluid_count);
+  A.setFromTriplets(triplet_list.begin(), triplet_list.end());
+  return A;
 }
 
 void Simulation2D::_advect_cell_data(float dt) {
@@ -121,7 +357,7 @@ void Simulation2D::_advect_cell_data(float dt) {
 
       // solve for original position
       vec2d x_orig = IVPSolvers<vec2d, MAC2D &>::solveIVP(
-          solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac_next);
+          ivp_solver, x_dest, mac.current_time, dt, MAC2D::dx_vel_dt, mac_next);
 
       // interpolate the cell data at the original position
       // for now, just density
@@ -130,34 +366,13 @@ void Simulation2D::_advect_cell_data(float dt) {
   }
 }
 
-void Simulation2D::_apply_forces(float dt) {
-  for (int j = 0; j < ny; ++j) {
-    for (int i = 0; i < nx + 1; ++i) { // u-grid
-      float force = 0.0f;
-      if (i > 0) {
-        force += mac.forces[mac.idx(i - 1, j)][0];
-      }
-      if (i < nx) {
-        force += mac.forces[mac.idx(i, j)][0];
-      }
-      force *= 0.5f;
+CellType MAC2D::get_cell_type(int i, int j) const {
+  // for now, everything is fluid
+  if (is_solid[idx(i, j)])
+    return CellType::SOLID;
 
-      mac_next.u[mac.u_idx(i, j)] += force * dt;
-    }
-  }
+  if (densities[idx(i, j)] > 0.0f)
+    return CellType::FLUID;
 
-  for (int j = 0; j < ny + 1; ++j) {
-    for (int i = 0; i < nx; ++i) { // v-grid
-      float force = 0.0f;
-      if (j > 0) {
-        force += mac.forces[mac.idx(i, j - 1)][1];
-      }
-      if (j < ny) {
-        force += mac.forces[mac.idx(i, j)][1];
-      }
-      force *= 0.5f;
-
-      mac_next.v[mac.v_idx(i, j)] += force * dt;
-    }
-  }
+  return CellType::AIR;
 }

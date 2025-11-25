@@ -12,6 +12,8 @@ MAC2D::MAC2D(int nx, int ny, float dx, float dy)
   densities.resize(nx * ny, 0.0f);
 
   cells.resize(nx * ny);
+  is_solid.resize(nx * ny, false);
+
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       int c_idx = i + j * nx;

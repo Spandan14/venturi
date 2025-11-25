@@ -1,5 +1,7 @@
 add_library(solver 
-    linear_ode_solver.cc)
+    linear_ode_solver.cc
+iccg.cc
+)
 
 target_include_directories(solver
     PUBLIC
