@@ -24,12 +24,12 @@ void Simulation2D::step(float dt) {
 
   mac_next.current_time += dt;
 
-  total_density = 0.0f;
-  for (float d : mac_next.densities) {
-    total_density += d;
-  }
-  std::cout << "Total Density After Step: " << total_density << std::endl;
-
+  // total_density = 0.0f;
+  // for (float d : mac_next.densities) {
+  //   total_density += d;
+  // }
+  // std::cout << "Total Density After Step: " << total_density << std::endl;
+  //
   // everything has now ended up in mac_next, so we swap
   std::swap(mac, mac_next);
 }
@@ -80,6 +80,21 @@ void Simulation2D::initialize_solids(
     for (int i = 0; i < nx; ++i) {
       mac.is_solid[mac.idx(i, j)] = initializer(i, j);
       mac_next.is_solid[mac.idx(i, j)] = initializer(i, j);
+
+      if (initializer(i, j)) {
+        // solid cell, set velocities to 0
+        mac.u[mac.u_idx(i, j)] = 0.0f;
+        mac.u[mac.u_idx(i + 1, j)] = 0.0f;
+        mac.v[mac.v_idx(i, j)] = 0.0f;
+        mac.v[mac.v_idx(i, j + 1)] = 0.0f;
+        mac_next.u[mac.u_idx(i, j)] = 0.0f;
+        mac_next.u[mac.u_idx(i + 1, j)] = 0.0f;
+        mac_next.v[mac.v_idx(i, j)] = 0.0f;
+        mac_next.v[mac.v_idx(i, j + 1)] = 0.0f;
+
+        // mac.densities[mac.idx(i, j)] = 0.0f;
+        // mac_next.densities[mac.idx(i, j)] = 0.0f;
+      }
     }
   }
 }
@@ -173,7 +188,7 @@ void Simulation2D::_pressure_solve(float dt) {
     }
   }
 
-  std::cout << "Fluid Cell Count: " << fluid_count << std::endl;
+  // std::cout << "Fluid Cell Count: " << fluid_count << std::endl;
 
   if (fluid_count == 0) {
     // no fluid cells, nothing to do
@@ -203,8 +218,8 @@ void Simulation2D::_pressure_solve(float dt) {
       if (fluid_idx[c_idx] != -1) {
         if (j == 0) {
 
-          std::cout << "Pressure at (" << i << ", " << j
-                    << "): " << pressure[fluid_idx[c_idx]] << std::endl;
+          // std::cout << "Pressure at (" << i << ", " << j
+          //           << "): " << pressure[fluid_idx[c_idx]] << std::endl;
         }
         mac_next.pressures[c_idx] = pressure[fluid_idx[c_idx]];
       } else {
@@ -431,6 +446,14 @@ void Simulation2D::_advect_cell_data(float dt) {
       // interpolate the cell data at the original position
       // for now, just density
       mac_next.densities[mac.idx(i, j)] = mac.density(x_orig);
+
+      // if (mac.is_position_solid(x_orig)) {
+      //   std::cout << "Warning: Density advected into solid at cell (" << i
+      //             << ", " << j << ")\n";
+      //   std::cout << "assigned density: " << mac_next.densities[mac.idx(i,
+      //   j)]
+      //             << std::endl;
+      // }
     }
   }
 }

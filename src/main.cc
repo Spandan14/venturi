@@ -8,8 +8,8 @@ int main() {
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {
-    if (j < 30 && j > 20 && i >= 80 && i < 140) {
-      return 1.0f;
+    if (j < 40 && j > 20 && i >= 80 && i < 140) {
+      return 2.0f;
     } else {
       return 0.07f;
     }
@@ -19,6 +19,34 @@ int main() {
   auto force_init = [](int i, int j) {
     return vec2d(0.0f, -GRAVITATIONAL_ACCL);
     // return vec2d(0.0f, 0.0f);
+  };
+
+  auto solid_init = [](int i, int j) {
+    // create a box in the middle
+    if (j > 70 && j < 80 && i >= 60 && i < 160) {
+      if (i >= 105 && i < 115) {
+        return false;
+      }
+      return true;
+    }
+
+    if (j > 40 && j < 50 && i >= 60 && i < 160) {
+      if (i >= 105 && i < 115) {
+        return false;
+      }
+      return true;
+    }
+
+    // box around densities
+    // if (((j < 15 && j > 8) || (j > 62 && j < 65)) && i >= 60 && i < 160) {
+    //   return true;
+    // }
+    //
+    if (((i < 60 && i > 57) || (i > 159 && i < 162)) && j > 60 && j < 70) {
+      return true;
+    }
+
+    return false;
   };
 
   // auto vel_u_init = [](int i, int j) { return 0.3 * (j - 50); };
@@ -60,13 +88,14 @@ int main() {
     float d1x = i - 70, d1y = j - 50;
     float d2x = i - 150, d2y = j - 50;
 
-    float f1 = d1x / (d1x * d1x + d1y * d1y + 20) * 500;
-    float f2 = -d2x / (d2x * d2x + d2y * d2y + 20) * 500;
+    float f1 = d1x / (d1x * d1x + d1y * d1y + 20) * 1000;
+    float f2 = -d2x / (d2x * d2x + d2y * d2y + 20) * 1000;
     return f1 + f2;
   };
 
   sim.initialize_density(density_init);
   sim.initialize_forces(force_init);
+  sim.initialize_solids(solid_init);
   sim.initialize_vel_u(vel_u_init);
   sim.initialize_vel_v(vel_v_init);
 

@@ -27,7 +27,8 @@ private:
 
   void _draw_sim();
 
-  void _draw_outline(float x0, float y0, float x1, float y1);
+  void _draw_outline(float x0, float y0, float x1, float y1, float r, float g,
+                     float b);
   void _draw_quad(float x0, float y0, float x1, float y1, float r, float g,
                   float b);
 };

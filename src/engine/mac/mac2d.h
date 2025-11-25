@@ -37,6 +37,7 @@ public:
 
   float current_time = 0.0f;
   CellType get_cell_type(int i, int j) const;
+  bool is_position_solid(vec2d pos) const;
 
   std::vector<Cell2D> cells;
   std::vector<bool> is_solid; // cell-centered solid flags

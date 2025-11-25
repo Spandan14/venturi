@@ -118,3 +118,12 @@ CellType MAC2D::get_cell_type(int i, int j) const {
 
   return CellType::AIR;
 }
+
+bool MAC2D::is_position_solid(vec2d pos) const {
+  float x = pos[0], y = pos[1];
+
+  int i = std::clamp(int(x / dx), 0, nx - 1);
+  int j = std::clamp(int(y / dy), 0, ny - 1);
+
+  return is_solid[idx(i, j)];
+}
