@@ -92,8 +92,8 @@ void Simulation2D::initialize_solids(
         mac_next.v[mac.v_idx(i, j)] = 0.0f;
         mac_next.v[mac.v_idx(i, j + 1)] = 0.0f;
 
-        // mac.densities[mac.idx(i, j)] = 0.0f;
-        // mac_next.densities[mac.idx(i, j)] = 0.0f;
+        mac.densities[mac.idx(i, j)] = 0.00f;
+        mac_next.densities[mac.idx(i, j)] = 0.00f;
       }
     }
   }
@@ -216,11 +216,6 @@ void Simulation2D::_pressure_solve(float dt) {
     for (int i = 0; i < nx; ++i) {
       int c_idx = mac.idx(i, j);
       if (fluid_idx[c_idx] != -1) {
-        if (j == 0) {
-
-          // std::cout << "Pressure at (" << i << ", " << j
-          //           << "): " << pressure[fluid_idx[c_idx]] << std::endl;
-        }
         mac_next.pressures[c_idx] = pressure[fluid_idx[c_idx]];
       } else {
         mac_next.pressures[c_idx] = 0.0f;
@@ -276,7 +271,7 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
         correction /= mac.dx;
 
         mac_next.u[mac.u_idx(i, j)] -= correction;
-      } else if (left_non_solid || right_non_solid) {
+      } else {
         // one side is solid, set to 0
         mac_next.u[mac.u_idx(i, j)] = 0.0f;
       }
@@ -334,7 +329,7 @@ void Simulation2D::_project_velocities(const Eigen::VectorXd &pressure,
         // std::cout << "Correction: " << correction << std::endl;
 
         mac_next.v[mac.v_idx(i, j)] -= correction;
-      } else if (top_non_solid || bottom_non_solid) {
+      } else {
         // one side is solid, set to 0
         mac_next.v[mac.v_idx(i, j)] = 0.0f;
       }
@@ -361,20 +356,20 @@ Simulation2D::_build_divergence(const std::vector<int> &fluid_idx,
       // NOTE: KEY to use new vel here
       // u velocities
       // div += mac_next.u[mac.u_idx(i + 1, j)]; // right face
-      div += mac.get_cell_type(i + 1, j) != CellType::FLUID
+      div += mac.get_cell_type(i + 1, j) == CellType::SOLID
                  ? 0.0f
                  : mac_next.u[mac.u_idx(i + 1, j)]; // right face
 
-      div -= mac.get_cell_type(i - 1, j) != CellType::FLUID
+      div -= mac.get_cell_type(i - 1, j) == CellType::SOLID
                  ? 0.0f
                  : mac_next.u[mac.u_idx(i, j)]; // left face
 
       // v velocities
-      div += mac.get_cell_type(i, j + 1) != CellType::FLUID
+      div += mac.get_cell_type(i, j + 1) == CellType::SOLID
                  ? 0.0f
                  : mac_next.v[mac.v_idx(i, j + 1)]; // top face
 
-      div -= mac.get_cell_type(i, j - 1) != CellType::FLUID
+      div -= mac.get_cell_type(i, j - 1) == CellType::SOLID
                  ? 0.0f
                  : mac_next.v[mac.v_idx(i, j)]; // bottom face
 
@@ -415,6 +410,10 @@ Simulation2D::_build_pressure_matrix(const std::vector<int> &fluid_idx,
           if (fluid_idx[n_idx] != -1) {
             // fluid neighbor
             triplet_list.emplace_back(mat_row, fluid_idx[n_idx], -inv_dx2);
+          }
+
+          if (mac.get_cell_type(ni, nj) != CellType::SOLID) {
+            // non-solid neighbor
             neighbor_count++;
           }
         }
@@ -434,6 +433,12 @@ Simulation2D::_build_pressure_matrix(const std::vector<int> &fluid_idx,
 void Simulation2D::_advect_cell_data(float dt) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) { // cell-centered
+      if (mac.get_cell_type(i, j) == CellType::SOLID) {
+        // solid cell, skip
+        mac_next.densities[mac.idx(i, j)] = mac.densities[mac.idx(i, j)];
+        continue;
+      }
+
       float x = (i + 0.5f) * mac.dx;
       float y = (j + 0.5f) * mac.dy;
 
@@ -445,15 +450,16 @@ void Simulation2D::_advect_cell_data(float dt) {
 
       // interpolate the cell data at the original position
       // for now, just density
-      mac_next.densities[mac.idx(i, j)] = mac.density(x_orig);
 
-      // if (mac.is_position_solid(x_orig)) {
-      //   std::cout << "Warning: Density advected into solid at cell (" << i
-      //             << ", " << j << ")\n";
-      //   std::cout << "assigned density: " << mac_next.densities[mac.idx(i,
-      //   j)]
-      //             << std::endl;
-      // }
+      if (mac.is_position_solid(x_orig)) {
+        std::cout << "Warning: Density advected into solid at cell (" << i
+                  << ", " << j << ")\n";
+        //           << std::endl;
+        x_orig = mac.nonsolid_projection(x_orig, x_dest, 10);
+        std::cout << "assigned density: " << mac.density(x_orig) << std::endl;
+      }
+
+      mac_next.densities[mac.idx(i, j)] = mac.density(x_orig);
     }
   }
 }

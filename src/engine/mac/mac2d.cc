@@ -113,10 +113,10 @@ CellType MAC2D::get_cell_type(int i, int j) const {
   if (is_solid[idx(i, j)])
     return CellType::SOLID;
 
-  if (densities[idx(i, j)] > 0.0f)
-    return CellType::FLUID;
+  // if (densities[idx(i, j)] > 0.0f)
+  return CellType::FLUID;
 
-  return CellType::AIR;
+  // return CellType::AIR;
 }
 
 bool MAC2D::is_position_solid(vec2d pos) const {
@@ -126,4 +126,34 @@ bool MAC2D::is_position_solid(vec2d pos) const {
   int j = std::clamp(int(y / dy), 0, ny - 1);
 
   return is_solid[idx(i, j)];
+}
+
+vec2d MAC2D::nonsolid_projection(vec2d in_solid, vec2d origin,
+                                 int total_iter) const {
+  // simple projection: move back towards origin until outside solid
+  if (!is_position_solid(in_solid)) {
+    return in_solid;
+  }
+
+  vec2d dir = in_solid - origin;
+  float len = dir.norm();
+  if (len < 1e-6f) {
+    return origin; // can't determine direction, return origin
+  }
+
+  dir /= len; // normalize
+
+  float t0 = 0.0f, t1 = 1.0f;
+  vec2d temp;
+  for (int iter = 0; iter < total_iter; ++iter) {
+    float tm = 0.5f * (t0 + t1);
+    temp = origin + dir * (len * tm);
+    if (is_position_solid(temp)) {
+      t1 = tm;
+    } else {
+      t0 = tm;
+    }
+  }
+
+  return origin + dir * (len * t0);
 }

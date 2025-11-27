@@ -39,6 +39,8 @@ public:
   CellType get_cell_type(int i, int j) const;
   bool is_position_solid(vec2d pos) const;
 
+  vec2d nonsolid_projection(vec2d in_solid, vec2d origin, int total_iter) const;
+
   std::vector<Cell2D> cells;
   std::vector<bool> is_solid; // cell-centered solid flags
                               // size: nx * ny

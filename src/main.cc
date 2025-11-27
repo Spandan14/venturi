@@ -1,6 +1,8 @@
 #include <engine/mac/mac2d.h>
 #include <engine/sim2d.h>
+#include <iostream>
 #include <renderer/renderer_2d.h>
+#include <thread>
 #include <utils/physical_consts.h>
 
 int main() {
@@ -8,16 +10,33 @@ int main() {
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {
-    if (j < 40 && j > 20 && i >= 80 && i < 140) {
-      return 2.0f;
+    if (j < 30 && j > 20 && i >= 80 && i < 140) {
+      return 5.0f;
     } else {
-      return 0.07f;
+      return 0.06f;
     }
     // return 0.2f;
   };
 
   auto force_init = [](int i, int j) {
-    return vec2d(0.0f, -GRAVITATIONAL_ACCL);
+    auto force = vec2d(0.0f, -GRAVITATIONAL_ACCL);
+
+    float u_d1x = i - 70, u_d1y = j - 50;
+    float u_d2x = i - 150, u_d2y = j - 50;
+
+    float u_f1 = -u_d1y / (u_d1x * u_d1x + u_d1y * u_d1y + 20) * 2000;
+    float u_f2 = u_d2y / (u_d2x * u_d2x + u_d2y * u_d2y + 20) * 2000;
+
+    float v_d1x = i - 70, v_d1y = j - 50;
+    float v_d2x = i - 150, v_d2y = j - 50;
+
+    float v_f1 = v_d1x / (v_d1x * v_d1x + v_d1y * v_d1y + 20) * 1200;
+    float v_f2 = -v_d2x / (v_d2x * v_d2x + v_d2y * v_d2y + 20) * 1200;
+
+    force[0] += u_f1 + u_f2;
+    force[1] += v_f1 + v_f2;
+
+    return force;
     // return vec2d(0.0f, 0.0f);
   };
 
@@ -95,29 +114,28 @@ int main() {
 
   sim.initialize_density(density_init);
   sim.initialize_forces(force_init);
-  sim.initialize_solids(solid_init);
   sim.initialize_vel_u(vel_u_init);
   sim.initialize_vel_v(vel_v_init);
+
+  sim.initialize_solids(solid_init);
 
   Renderer2D renderer = Renderer2D(sim.get_mac(), 1760, 800);
 
   auto last_frame = std::chrono::high_resolution_clock::now();
   while (renderer.should_draw()) {
     auto this_frame = std::chrono::high_resolution_clock::now();
-    sim.step(std::chrono::duration<float>(this_frame - last_frame).count());
-    // if (sim.get_mac().current_time <= 0.001f) {
-    // sim.step(0.01f);
-    // }
-    // std::cout << "Frame Time: "
-    //           << std::chrono::duration<float, std::milli>(this_frame -
-    //                                                       last_frame)
-    //                  .count()
-    //           << " ms" << std::endl;
+    auto step_ms =
+        std::chrono::duration<float>(this_frame - last_frame).count();
+    sim.step(step_ms);
+    std::cout << "FPS: " << 1.0f / step_ms << std::endl;
 
     last_frame = this_frame;
 
     renderer.render();
-    // std::cout << "Current Time: " << sim.get_mac().current_time << std::endl;
+
     renderer.poll();
+    //
+    // sleep for 2 seconds
+    // std::this_thread::sleep_for(std::chrono::milliseconds(400));
   }
 }
