@@ -1,3 +1,4 @@
+#include "parser/parser_2d.h"
 #include <engine/mac/mac2d.h>
 #include <engine/sim2d.h>
 #include <iostream>
@@ -6,14 +7,17 @@
 #include <utils/physical_consts.h>
 
 int main() {
+  Parser2D parser;
+
   Simulation2D sim = Simulation2D(220, 100, 1, 1);
+  parser.parse("../../../sims/parser_test_1.vnt", sim);
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {
     if (j < 30 && j > 20 && i >= 80 && i < 140) {
-      return 5.0f;
+      return 1.0f;
     } else {
-      return 0.06f;
+      return 0.15f;
     }
     // return 0.2f;
   };
@@ -24,14 +28,14 @@ int main() {
     float u_d1x = i - 70, u_d1y = j - 50;
     float u_d2x = i - 150, u_d2y = j - 50;
 
-    float u_f1 = -u_d1y / (u_d1x * u_d1x + u_d1y * u_d1y + 20) * 2000;
-    float u_f2 = u_d2y / (u_d2x * u_d2x + u_d2y * u_d2y + 20) * 2000;
+    float u_f1 = -u_d1y / (u_d1x * u_d1x + u_d1y * u_d1y + 20) * 1000;
+    float u_f2 = u_d2y / (u_d2x * u_d2x + u_d2y * u_d2y + 20) * 1000;
 
     float v_d1x = i - 70, v_d1y = j - 50;
     float v_d2x = i - 150, v_d2y = j - 50;
 
-    float v_f1 = v_d1x / (v_d1x * v_d1x + v_d1y * v_d1y + 20) * 1200;
-    float v_f2 = -v_d2x / (v_d2x * v_d2x + v_d2y * v_d2y + 20) * 1200;
+    float v_f1 = v_d1x / (v_d1x * v_d1x + v_d1y * v_d1y + 20) * 1000;
+    float v_f2 = -v_d2x / (v_d2x * v_d2x + v_d2y * v_d2y + 20) * 1000;
 
     force[0] += u_f1 + u_f2;
     force[1] += v_f1 + v_f2;
@@ -42,14 +46,14 @@ int main() {
 
   auto solid_init = [](int i, int j) {
     // create a box in the middle
-    if (j > 70 && j < 80 && i >= 60 && i < 160) {
+    if (j > 75 && j < 80 && i >= 60 && i < 160) {
       if (i >= 105 && i < 115) {
         return false;
       }
       return true;
     }
 
-    if (j > 40 && j < 50 && i >= 60 && i < 160) {
+    if (j > 45 && j < 50 && i >= 60 && i < 160) {
       if (i >= 105 && i < 115) {
         return false;
       }
@@ -114,8 +118,8 @@ int main() {
 
   sim.initialize_density(density_init);
   sim.initialize_forces(force_init);
-  sim.initialize_vel_u(vel_u_init);
-  sim.initialize_vel_v(vel_v_init);
+  // sim.initialize_vel_u(vel_u_init);
+  // sim.initialize_vel_v(vel_v_init);
 
   sim.initialize_solids(solid_init);
 
@@ -136,6 +140,6 @@ int main() {
     renderer.poll();
     //
     // sleep for 2 seconds
-    // std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 }

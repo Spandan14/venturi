@@ -14,6 +14,9 @@ void Simulation2D::step(float dt) {
   }
 
   std::cout << "Total Density: " << total_density << std::endl;
+  std::cout << "Max density: "
+            << *std::max_element(mac.densities.begin(), mac.densities.end())
+            << std::endl;
 
   _apply_forces(dt);      // will apply forces in mac
   _advect_velocities(dt); // will store advected velocities in mac_next
@@ -452,11 +455,12 @@ void Simulation2D::_advect_cell_data(float dt) {
       // for now, just density
 
       if (mac.is_position_solid(x_orig)) {
-        std::cout << "Warning: Density advected into solid at cell (" << i
-                  << ", " << j << ")\n";
+        // std::cout << "Warning: Density advected into solid at cell (" << i
+        //           << ", " << j << ")\n";
         //           << std::endl;
         x_orig = mac.nonsolid_projection(x_orig, x_dest, 10);
-        std::cout << "assigned density: " << mac.density(x_orig) << std::endl;
+        // std::cout << "assigned density: " << mac.density(x_orig) <<
+        // std::endl;
       }
 
       mac_next.densities[mac.idx(i, j)] = mac.density(x_orig);
