@@ -1,8 +1,8 @@
 #include "parser_2d.h"
 
-Parser2D::Parser2D() : parser(_load_grammar(VENTURI_LANG_GRAMMAR_PATH)) {}
+peg::parser Parser::parser = Parser::_load_grammar(VENTURI_LANG_GRAMMAR_PATH);
 
-void Parser2D::parse(const char *filename, Simulation2D &sim) {
+void Parser::parse(const char *filename, Simulation2D &sim) {
   std::string src = load_text_file(filename);
 
   std::shared_ptr<peg::Ast> ast;
@@ -13,7 +13,7 @@ void Parser2D::parse(const char *filename, Simulation2D &sim) {
   std::cout << peg::ast_to_s(ast) << std::endl;
 }
 
-peg::parser Parser2D::_load_grammar(const std::string &grammar_path) {
+peg::parser Parser::_load_grammar(const std::string &grammar_path) {
   std::string grammar = load_text_file(grammar_path);
 
   peg::parser p(grammar.c_str());

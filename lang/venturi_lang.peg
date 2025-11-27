@@ -17,29 +17,37 @@ WindowStmt     <- 'window' _ Int _ 'x' _ Int _
 SetStmt        <- 'set' _ Identifier _ '=' _ CellSelector _
 CellSelector   <- 'cells' _ 'where' _ Expr
 
-DensityStmt    <- 'density' _ Target _ '=' _ Number _
-ForceStmt      <- 'force'   _ Target _ '=' _ Vector2 _
+DensityStmt    <- 'density' _ Target _ '=' _ NumExpr _
+ForceStmt      <- 'force'   _ Target _ '=' _ Vector2Expr _
 SolidStmt      <- 'solid'   _ Target _ '=' _ Boolean _
 
 Target         <- 'all' / Identifier
 
-Vector2        <- '(' _ Number _ ',' _ Number _ ')'
+Vector2Expr <- '(' _ Expr _ ',' _ Expr _ ')'
 
 Expr           <- OrExpr
 OrExpr         <- AndExpr ( _ 'or' _ AndExpr )*
 AndExpr        <- CmpExpr ( _ 'and' _ CmpExpr )*
 
-CmpExpr        <- RangeExpr / BinaryCmp / ParenExpr
+CmpExpr        <- AddExpr ( _ CmpOp _ AddExpr )?
+                / RangeExpr
 
 BinaryCmp      <- Var _ CmpOp _ Int
                 / Int _ CmpOp _ Var
 
-RangeExpr      <- Int _ '<=' _ Var _ '<=' _ Int
+RangeExpr      <- '(' _ AddExpr _ '<=' _ Var _ '<=' _ AddExpr _ ')'
 
 ParenExpr      <- '(' _ Expr _ ')'
 
+NumExpr     <- AddExpr
+AddExpr     <- MulExpr ( _ ('+' / '-') _ MulExpr )*
+MulExpr     <- Primary ( _ ('*' / '/') _ Primary )*
+Primary     <- Number / Var / FuncCall / '(' _ Expr _ ')'
+
+FuncCall    <- Identifier '(' _ (Expr ( _ ',' _ Expr )*)? _ ')'
+
 Var            <- 'i' / 'j'
-CmpOp          <- '==' / '<=' / '<' / '>=' / '>'
+CmpOp          <- '==' / '!=' / '<=' / '<' / '>=' / '>'
 Number         <- < '-'? [0-9]+ ('.' [0-9]+)? >
 Int            <- < '-'? [0-9]+ >
 Boolean        <- 'true' / 'false'

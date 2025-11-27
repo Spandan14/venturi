@@ -5,7 +5,7 @@ window 480 x 320
 
 set left = cells where i < 5
 set bottom = cells where j == 0
-set center = cells where 20 <= i <= 40 and 20 <= j <= 40
+set center = cells where (20 <= i <= 40) and (20 <= j <= 40)
 
 density all = 0.0
 density center = 1.0

@@ -4,14 +4,16 @@
 #include <engine/sim2d.h>
 #include <parser/utils.h>
 
-class Parser2D {
+class Parser {
 public:
-  Parser2D();
-  ~Parser2D() = default;
+  Parser() = default;
+  ~Parser() = default;
 
   void parse(const char *filename, Simulation2D &sim);
+  // void parse(const std::string &src, Simulation3D &sim);
 
 private:
-  peg::parser _load_grammar(const std::string &grammar_path);
-  peg::parser parser;
+  static peg::parser parser;
+
+  static peg::parser _load_grammar(const std::string &grammar_path);
 };

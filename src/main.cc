@@ -7,7 +7,7 @@
 #include <utils/physical_consts.h>
 
 int main() {
-  Parser2D parser;
+  Parser parser;
 
   Simulation2D sim = Simulation2D(220, 100, 1, 1);
   parser.parse("../../../sims/parser_test_1.vnt", sim);
