@@ -1,16 +1,16 @@
-#include "parser_2d.h"
+#include "parser.h"
 
 peg::parser Parser::parser = Parser::_load_grammar(FLUX_LANG_GRAMMAR_PATH);
 
-void Parser::parse(const char *filename, Simulation2D &sim) {
-  std::string src = load_text_file(filename);
+std::shared_ptr<peg::Ast> Parser::parse(const char *filename,
+                                        Simulation2D &sim) {
+  source = load_text_file(filename);
 
-  std::shared_ptr<peg::Ast> ast;
-  if (!parser.parse(src.c_str(), ast)) {
+  if (!parser.parse(source.c_str(), ast)) {
     throw std::runtime_error("Failed to parse source file!");
   }
 
-  std::cout << peg::ast_to_s(ast) << std::endl;
+  return ast;
 }
 
 peg::parser Parser::_load_grammar(const std::string &grammar_path) {

@@ -1,7 +1,9 @@
 #include <engine/mac/mac2d.h>
 #include <engine/sim2d.h>
-#include <fluxlang/parser_2d.h>
+#include <fluxlang/parser.h>
+#include <fluxlang/transformer.h>
 #include <iostream>
+#include <peglib.h>
 #include <renderer/renderer_2d.h>
 #include <utils/physical_consts.h>
 
@@ -9,7 +11,12 @@ int main() {
   Parser parser;
 
   Simulation2D sim = Simulation2D(220, 100, 1, 1);
-  parser.parse("../../../sims/parser_test_1.vnt", sim);
+  auto ast = parser.parse("../../../sims/parser_test_1.flx", sim);
+
+  std::cout << peg::ast_to_s(ast) << std::endl;
+
+  FluxASTTransformer transformer(*ast);
+  auto script = transformer.transform();
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {

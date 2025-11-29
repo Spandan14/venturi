@@ -1,5 +1,8 @@
 add_library(fluxlang 
-    parser_2d.cc)
+    parser.cc
+    ast/visitor.cc
+    transformer.cc
+)
 
 target_include_directories(fluxlang
     PUBLIC
