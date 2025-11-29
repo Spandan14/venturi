@@ -2,7 +2,7 @@
 
 #include "peglib.h"
 #include <engine/sim2d.h>
-#include <parser/utils.h>
+#include <fluxlang/utils.h>
 
 class Parser {
 public:

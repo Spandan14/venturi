@@ -1,6 +1,6 @@
 #include "parser_2d.h"
 
-peg::parser Parser::parser = Parser::_load_grammar(VENTURI_LANG_GRAMMAR_PATH);
+peg::parser Parser::parser = Parser::_load_grammar(FLUX_LANG_GRAMMAR_PATH);
 
 void Parser::parse(const char *filename, Simulation2D &sim) {
   std::string src = load_text_file(filename);

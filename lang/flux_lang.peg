@@ -1,4 +1,4 @@
-Script         <- Statement*
+Script         <- Statement ( _ Statement )*
 
 Statement      <- DimStmt
                 / GridStmt
@@ -8,22 +8,22 @@ Statement      <- DimStmt
                 / ForceStmt
                 / SolidStmt
 
-DimStmt        <- 'dim' _ DimType _
+DimStmt        <- 'dim' _ DimType
 DimType        <- '2D' / '3D'
 
-GridStmt       <- 'grid' _ Int _ 'x' _ Int _
-WindowStmt     <- 'window' _ Int _ 'x' _ Int _
+GridStmt       <- 'grid' _ Int _ 'x' _ Int ( _ 'x' _ Int )?
+WindowStmt     <- 'window' _ Int _ 'x' _ Int ( _ 'x' _ Int )?
 
-SetStmt        <- 'set' _ Identifier _ '=' _ CellSelector _
+SetStmt        <- 'set' _ Identifier _ '=' _ CellSelector
 CellSelector   <- 'cells' _ 'where' _ Expr
 
-DensityStmt    <- 'density' _ Target _ '=' _ NumExpr _
-ForceStmt      <- 'force'   _ Target _ '=' _ Vector2Expr _
-SolidStmt      <- 'solid'   _ Target _ '=' _ Boolean _
+DensityStmt    <- 'density' _ Target _ '=' _ Expr 
+ForceStmt      <- 'force'   _ Target _ '=' _ VectorExpr 
+SolidStmt      <- 'solid'   _ Target _ '=' _ Expr 
 
 Target         <- 'all' / Identifier
 
-Vector2Expr <- '(' _ Expr _ ',' _ Expr _ ')'
+VectorExpr     <- '(' _ Expr _ ',' _ Expr ( _ ',' _ Expr )? _ ')'
 
 Expr           <- OrExpr
 OrExpr         <- AndExpr ( _ 'or' _ AndExpr )*
@@ -39,14 +39,14 @@ RangeExpr      <- '(' _ AddExpr _ '<=' _ Var _ '<=' _ AddExpr _ ')'
 
 ParenExpr      <- '(' _ Expr _ ')'
 
-NumExpr     <- AddExpr
-AddExpr     <- MulExpr ( _ ('+' / '-') _ MulExpr )*
-MulExpr     <- Primary ( _ ('*' / '/') _ Primary )*
-Primary     <- Number / Var / FuncCall / '(' _ Expr _ ')'
+NumExpr        <- AddExpr
+AddExpr        <- MulExpr ( _ ('+' / '-') _ MulExpr )*
+MulExpr        <- Primary ( _ ('*' / '/') _ rrimary )*
+Primary        <- Number / Var / FuncCall / '(' _ Expr _ ')'
 
-FuncCall    <- Identifier '(' _ (Expr ( _ ',' _ Expr )*)? _ ')'
+FuncCall       <- Identifier '(' _ (Expr ( _ ',' _ Expr )*)? _ ')'
 
-Var            <- 'i' / 'j'
+Var            <- 'i' / 'j' / 'k'
 CmpOp          <- '==' / '!=' / '<=' / '<' / '>=' / '>'
 Number         <- < '-'? [0-9]+ ('.' [0-9]+)? >
 Int            <- < '-'? [0-9]+ >

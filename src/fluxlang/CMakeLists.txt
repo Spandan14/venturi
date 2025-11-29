@@ -1,7 +1,7 @@
-add_library(parser 
+add_library(fluxlang 
     parser_2d.cc)
 
-target_include_directories(parser
+target_include_directories(fluxlang
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/..
         ${PROJECT_SOURCE_DIR}/extern/peglib
@@ -9,4 +9,4 @@ target_include_directories(parser
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 
-target_link_libraries(parser PUBLIC Eigen3::Eigen)
+target_link_libraries(fluxlang PUBLIC Eigen3::Eigen)

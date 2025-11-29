@@ -2,7 +2,7 @@ add_subdirectory(engine)
 add_subdirectory(solver)
 add_subdirectory(utils)
 add_subdirectory(renderer)
-add_subdirectory(parser)
+add_subdirectory(fluxlang)
 
 add_executable(Venturi
     main.cc
@@ -16,6 +16,6 @@ target_link_libraries(Venturi
         solver
         utils
         renderer
-        parser
+        fluxlang
         Eigen3::Eigen
 )

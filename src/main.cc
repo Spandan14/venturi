@@ -1,9 +1,8 @@
-#include "parser/parser_2d.h"
 #include <engine/mac/mac2d.h>
 #include <engine/sim2d.h>
+#include <fluxlang/parser_2d.h>
 #include <iostream>
 #include <renderer/renderer_2d.h>
-#include <thread>
 #include <utils/physical_consts.h>
 
 int main() {
@@ -14,10 +13,10 @@ int main() {
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {
-    if (j < 30 && j > 20 && i >= 80 && i < 140) {
+    if (j < 30 && j > 10 && i >= 80 && i < 140) {
       return 1.0f;
     } else {
-      return 0.15f;
+      return 0.10f;
     }
     // return 0.2f;
   };
