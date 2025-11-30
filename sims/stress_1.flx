@@ -1,5 +1,5 @@
 dim 3D
-grid 256 x 256 x 256
+grid 256 x 256 x 256 with dx = 1
 window 64 x 64 x 64
 
 set OuterWall = cells where (i < 5 or i > 251) and (j < 10 or j > 246)

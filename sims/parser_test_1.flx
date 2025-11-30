@@ -1,6 +1,6 @@
 dim 2D
 
-grid 120 x 80
+grid 120 x 80 with dx = 1
 window 480 x 320
 
 set left = cells where i < 5

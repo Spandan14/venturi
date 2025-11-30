@@ -2,7 +2,7 @@
 #include <fluxlang/ast/visitor.h>
 
 namespace Flux {
-void Script::accept(Visitor &visitor) { visitor.visits(*this); }
+void Script::accept(Visitor &visitor) { visitor.visit(*this); }
 
 void LiteralExpression::accept(Visitor &visitor) { visitor.visit(*this); }
 void GenVariableExpression::accept(Visitor &visitor) { visitor.visit(*this); }

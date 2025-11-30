@@ -138,7 +138,8 @@ std::string Flux::GridStatement::to_string() {
       result += ", ";
     }
   }
-  result += ");";
+  result += ") with dx ";
+  result += std::to_string(dx) + ";";
   return result;
 }
 

@@ -1,17 +1,18 @@
 #pragma once
 
+#include "engine/sim.h"
 #include "mac/mac2d.h"
 #include "solver/ivp.h"
 #include "solver/pressure_solvers.h"
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-class Simulation2D {
+class Simulation2D : public Simulation {
 public:
   Simulation2D(int nx, int ny, float dx, float dy);
   ~Simulation2D() = default;
 
-  void step(float dt);
+  void step(float dt) override;
   [[nodiscard]] const MAC2D &get_mac() const { return mac; }
 
   void initialize_vel_u(const std::function<float(int, int)> &initializer);

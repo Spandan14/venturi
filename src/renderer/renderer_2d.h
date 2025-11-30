@@ -1,5 +1,6 @@
 #pragma once
 
+#include "renderer/renderer.h"
 #include <Eigen/Core>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -7,13 +8,13 @@
 
 typedef Eigen::Vector3f vec3d;
 
-class Renderer2D {
+class Renderer2D : public Renderer {
 public:
   Renderer2D(const MAC2D &mac, int screen_width, int screen_height);
   ~Renderer2D();
 
   inline bool should_draw() const { return !glfwWindowShouldClose(_window); }
-  void render();
+  void render() override;
   inline void poll() { glfwPollEvents(); }
 
 private:

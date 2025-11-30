@@ -97,6 +97,7 @@ std::unique_ptr<Flux::GridStatement>
 FluxASTTransformer::_transform_grid_statement(peg::Ast &node) {
   // GridStmt       <- 'grid' _ Int _ 'x' _ Int ( _ 'x' _ Int )?
   std::vector<int> sizes;
+  std::optional<double> dx = std::nullopt;
   for (auto &child : node.nodes) {
     if (_is_spacer(*child)) {
       continue;
@@ -110,10 +111,22 @@ FluxASTTransformer::_transform_grid_statement(peg::Ast &node) {
       int size = std::stoi(std::string(child->token));
       sizes.push_back(size);
     }
+
+    if (child->name == "Number") {
+      if (!child->is_token) {
+        throw std::runtime_error("Number node is not a token!");
+      }
+
+      dx = std::stod(std::string(child->token));
+    }
   }
 
   if (sizes.size() != 2 && sizes.size() != 3) {
     throw std::runtime_error("GridStmt must have 2 or 3 sizes!");
+  }
+
+  if (!dx.has_value()) {
+    throw std::runtime_error("GridStmt must have a dx value!");
   }
 
   std::vector<std::unique_ptr<Flux::Expression>> size_exprs;
@@ -122,7 +135,8 @@ FluxASTTransformer::_transform_grid_statement(peg::Ast &node) {
         std::make_unique<Flux::LiteralExpression>(static_cast<double>(size)));
   }
 
-  return std::make_unique<Flux::GridStatement>(std::move(size_exprs));
+  return std::make_unique<Flux::GridStatement>(std::move(size_exprs),
+                                               dx.value());
 }
 
 std::unique_ptr<Flux::WindowStatement>

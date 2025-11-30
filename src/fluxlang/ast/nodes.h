@@ -144,8 +144,9 @@ public:
 class GridStatement : public Statement {
 public:
   std::vector<std::unique_ptr<Expression>> sizes;
-  GridStatement(std::vector<std::unique_ptr<Expression>> r)
-      : sizes(std::move(r)) {}
+  double dx;
+  GridStatement(std::vector<std::unique_ptr<Expression>> r, double dx_val)
+      : sizes(std::move(r)), dx(dx_val) {}
   void accept(Visitor &visitor) override;
   std::string to_string() override;
 };

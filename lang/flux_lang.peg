@@ -11,7 +11,7 @@ Statement      <- DimStmt
 DimStmt        <- 'dim' _ DimType
 DimType        <- '2D' / '3D'
 
-GridStmt       <- 'grid' _ Int _ 'x' _ Int ( _ 'x' _ Int )?
+GridStmt       <- 'grid' _ Int _ 'x' _ Int ( _ 'x' _ Int )? _ 'with dx =' _ Number 
 WindowStmt     <- 'window' _ Int _ 'x' _ Int ( _ 'x' _ Int )?
 
 SetStmt        <- 'set' _ Identifier _ '=' _ CellSelector

@@ -23,7 +23,7 @@ class Visitor {
 public:
   virtual ~Visitor() = default;
 
-  virtual void visits(Script &node) = 0;
+  virtual void visit(Script &node) = 0;
 
   virtual void visit(LiteralExpression &node) = 0;
   virtual void visit(GenVariableExpression &node) = 0;
