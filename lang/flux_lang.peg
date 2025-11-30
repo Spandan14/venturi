@@ -32,12 +32,7 @@ AndExpr        <- CmpExpr ( _ 'and' _ CmpExpr )*
 CmpExpr        <- AddExpr ( _ CmpOp _ AddExpr )?
                 / RangeExpr
 
-BinaryCmp      <- Var _ CmpOp _ Int
-                / Int _ CmpOp _ Var
-
 RangeExpr      <- '(' _ AddExpr _ '<=' _ Var _ '<=' _ AddExpr _ ')'
-
-ParenExpr      <- '(' _ Expr _ ')'
 
 NumExpr        <- AddExpr
 AddExpr        <- MulExpr ( _ ('+' / '-') _ MulExpr )*
