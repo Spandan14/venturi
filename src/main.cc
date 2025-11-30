@@ -11,7 +11,7 @@ int main() {
   Parser parser;
 
   Simulation2D sim = Simulation2D(220, 100, 1, 1);
-  auto ast = parser.parse("../../../sims/parser_test_1.flx", sim);
+  auto ast = parser.parse("../../../sims/stress_1.flx", sim);
 
   FluxASTTransformer transformer(*ast);
   auto script = transformer.transform();

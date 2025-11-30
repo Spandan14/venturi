@@ -14,6 +14,7 @@ std::unique_ptr<Flux::Script> FluxASTTransformer::transform() {
     }
 
     auto stmt = _transform_statement(*stmt_child);
+    std::cout << "Transformed Statement: " << stmt->to_string() << std::endl;
     statements.push_back(std::move(stmt));
   }
 
@@ -299,8 +300,17 @@ FluxASTTransformer::_transform_expression(peg::Ast &node) {
   } else if (reduced_expr.name == "CmpExpr") {
     return _transform_cmp_expression(reduced_expr);
   } else if (reduced_expr.name == "AddExpr") {
+    // check if is subtraction
+    if (reduced_expr.nodes[1]->token == std::string("-")) {
+      return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Subtract);
+    }
+
     return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Add);
   } else if (reduced_expr.name == "MulExpr") {
+    if (reduced_expr.nodes[1]->token == std::string("/")) {
+      return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Divide);
+    }
+
     return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Multiply);
   } else if (reduced_expr.name == "Number" || reduced_expr.name == "Boolean") {
     return _transform_literal_expression(reduced_expr);
@@ -447,7 +457,7 @@ FluxASTTransformer::_transform_gen_func_call_expression(peg::Ast &node) {
       continue;
     }
 
-    if (child->name == "GenFunc") {
+    if (child->name == "Identifier") {
       func = _extract_gen_func(*child);
     } else if (child->name == "Expr") {
       argument = _transform_expression(*child);

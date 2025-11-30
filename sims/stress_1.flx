@@ -1,0 +1,15 @@
+dim 3D
+grid 256 x 256 x 256
+window 64 x 64 x 64
+
+set OuterWall = cells where (i < 5 or i > 251) and (j < 10 or j > 246)
+set FluidZone = cells where (( 20 <= i <= 236 ) and ( 20 <= j <= 236 )) and ( 20 <= k <= 236 )
+set InternalObject = cells where sin(i) < 10.5 * 2 and tan(k)
+
+force OuterWall = ( 5.0 * sin(j / 256) , 0.0 - (j * 0.01) , 1.2 * 3.0 )
+density FluidZone = 1.0 / 0.5 + 2.0
+solid InternalObject = true and (((i + j) + k) > 100)
+
+force all = ( -0.005 * i , -0.005 * j )
+set TempZone = cells where (i + j) > 100 and (k < 5 or k > 251)
+density TempZone = 0.5 * 2.0
