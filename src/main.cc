@@ -13,10 +13,9 @@ int main() {
   Simulation2D sim = Simulation2D(220, 100, 1, 1);
   auto ast = parser.parse("../../../sims/parser_test_1.flx", sim);
 
-  std::cout << peg::ast_to_s(ast) << std::endl;
-
   FluxASTTransformer transformer(*ast);
   auto script = transformer.transform();
+  std::cout << script->to_string() << std::endl;
 
   auto density_init = [](int i, int j) {
     // if (i >= 50 && i < 170 && j >= 50 && j < 55) {

@@ -1,6 +1,7 @@
 add_library(fluxlang 
     parser.cc
     ast/visitor.cc
+    ast/nodes.cc
     transformer.cc
 )
 

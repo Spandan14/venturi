@@ -2,22 +2,13 @@
 
 std::unique_ptr<Flux::Script> FluxASTTransformer::transform() {
   // first child of the root is always a Script
-  if (peg_root.nodes.empty()) {
-    throw std::runtime_error("AST root has no children!");
-  }
-
-  if (peg_root.nodes.size() != 1) {
-    throw std::runtime_error("AST root has more than one child!");
-  }
-
-  auto &script_node = *peg_root.nodes[0];
-  if (script_node.name != "Script") {
+  if (peg_root.name != "Script") {
     throw std::runtime_error("Expected Script node as first child of root!");
   }
 
   std::vector<std::unique_ptr<Flux::Statement>> statements;
 
-  for (auto &stmt_child : script_node.nodes) {
+  for (auto &stmt_child : peg_root.nodes) {
     if (_is_spacer(*stmt_child)) {
       continue;
     }
@@ -31,7 +22,7 @@ std::unique_ptr<Flux::Script> FluxASTTransformer::transform() {
 
 peg::Ast &FluxASTTransformer::_reduce(peg::Ast &node) {
   // recursively reduce child nodes
-  if (node.nodes.size() <= 1) {
+  if (node.nodes.size() != 1) {
     return node;
   }
 
@@ -211,7 +202,7 @@ FluxASTTransformer::_transform_density_statement(peg::Ast &node) {
     }
 
     if (child->name == "Target") {
-      identifier = _extract_target(node);
+      identifier = _extract_target(*child);
       if (identifier != "all") {
         target_type = Flux::TargetType::Identifier;
       }
@@ -245,7 +236,7 @@ FluxASTTransformer::_transform_force_statement(peg::Ast &node) {
     }
 
     if (child->name == "Target") {
-      identifier = _extract_target(node);
+      identifier = _extract_target(*child);
       if (identifier != "all") {
         target_type = Flux::TargetType::Identifier;
       }
@@ -277,7 +268,7 @@ FluxASTTransformer::_transform_solid_statement(peg::Ast &node) {
     }
 
     if (child->name == "Target") {
-      identifier = _extract_target(node);
+      identifier = _extract_target(*child);
       if (identifier != "all") {
         target_type = Flux::TargetType::Identifier;
       }
@@ -416,7 +407,7 @@ FluxASTTransformer::_transform_range_expression(peg::Ast &node) {
       continue;
     }
 
-    if (child->name == "Expr") {
+    if (child->name == "AddExpr") {
       if (!start) {
         start = _transform_expression(*child);
       } else {
