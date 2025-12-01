@@ -95,8 +95,8 @@ void Renderer2D::_draw_sim() {
       if (mac.get_cell_type(i, j) == CellType::SOLID) {
         // std::cout << "Cell vel of solid cell (" << i << ", " << j << "): ("
         //           << cell_vel[0] << ", " << cell_vel[1] << ")\n";
-        // _draw_quad(i * mac.dx, j * mac.dy, (i + 1) * mac.dx, (j + 1) *
-        // mac.dy,
+        _draw_quad(i * mac.dx, j * mac.dy, (i + 1) * mac.dx, (j + 1) * mac.dy,
+                   color[0], color[1], color[2]);
         // 0.2f, 0.2f, 0.2f);
         _draw_outline(i * mac.dx, j * mac.dy, (i + 1) * mac.dx,
                       (j + 1) * mac.dy, 0.2f, 0.2f, 0.2f);

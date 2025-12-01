@@ -314,18 +314,9 @@ FluxASTTransformer::_transform_expression(peg::Ast &node) {
   } else if (reduced_expr.name == "CmpExpr") {
     return _transform_cmp_expression(reduced_expr);
   } else if (reduced_expr.name == "AddExpr") {
-    // check if is subtraction
-    if (reduced_expr.nodes[1]->token == std::string("-")) {
-      return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Subtract);
-    }
-
-    return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Add);
+    return _transform_chained_expression(reduced_expr);
   } else if (reduced_expr.name == "MulExpr") {
-    if (reduced_expr.nodes[1]->token == std::string("/")) {
-      return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Divide);
-    }
-
-    return _transform_bin_expression(reduced_expr, Flux::BinaryOp::Multiply);
+    return _transform_chained_expression(reduced_expr);
   } else if (reduced_expr.name == "Number" || reduced_expr.name == "Boolean") {
     return _transform_literal_expression(reduced_expr);
   } else if (reduced_expr.name == "Var") {
@@ -371,6 +362,72 @@ FluxASTTransformer::_transform_bin_expression(peg::Ast &node,
 
   return std::make_unique<Flux::BinaryExpression>(op, std::move(operands[0]),
                                                   std::move(operands[1]));
+}
+
+std::unique_ptr<Flux::BinaryExpression>
+FluxASTTransformer::_transform_chained_expression(peg::Ast &node) {
+  std::vector<std::unique_ptr<Flux::Expression>> operands;
+  std::vector<Flux::BinaryOp> ops;
+
+  for (auto &child : node.nodes) {
+    if (_is_spacer(*child)) {
+      continue;
+    }
+
+    if (child->name == "MulOp" || child->name == "AddOp") {
+      if (!child->is_token) {
+        throw std::runtime_error("Operator node is not a token!");
+      }
+
+      std::string token = std::string(child->token);
+      Flux::BinaryOp op;
+      if (token == "+") {
+        op = Flux::BinaryOp::Add;
+      } else if (token == "-") {
+        op = Flux::BinaryOp::Subtract;
+      } else if (token == "*") {
+        op = Flux::BinaryOp::Multiply;
+      } else if (token == "/") {
+        op = Flux::BinaryOp::Divide;
+      } else if (token == "^") {
+        op = Flux::BinaryOp::Power;
+      } else {
+        throw std::runtime_error("Unknown operator: " + token);
+      }
+      ops.push_back(op);
+    } else {
+      auto expr = _transform_expression(*child);
+      operands.push_back(std::move(expr));
+    }
+  }
+
+  if (operands.size() < 2) {
+    throw std::runtime_error(
+        "ChainedExpression must have at least two operands!");
+  }
+
+  if (ops.size() != operands.size() - 1) {
+    std::cout << "Operands size: " << operands.size()
+              << ", Ops size: " << ops.size() << std::endl;
+    for (const auto &op : ops) {
+      std::cout << "Op: " << static_cast<int>(op) << std::endl;
+    }
+    for (const auto &operand : operands) {
+      std::cout << "Operand: " << operand->to_string() << std::endl;
+    }
+    throw std::runtime_error(
+        "Number of operators must be one less than number of operands!");
+  }
+
+  // build left-associative binary expressions
+  std::unique_ptr<Flux::Expression> left = std::move(operands[0]);
+  for (size_t i = 0; i < ops.size(); ++i) {
+    left = std::make_unique<Flux::BinaryExpression>(ops[i], std::move(left),
+                                                    std::move(operands[i + 1]));
+  }
+
+  return std::unique_ptr<Flux::BinaryExpression>(
+      static_cast<Flux::BinaryExpression *>(left.release()));
 }
 
 std::unique_ptr<Flux::BinaryExpression>

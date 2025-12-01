@@ -34,6 +34,8 @@ private:
   std::unique_ptr<Flux::BinaryExpression>
   _transform_bin_expression(peg::Ast &node, Flux::BinaryOp op);
   std::unique_ptr<Flux::BinaryExpression>
+  _transform_chained_expression(peg::Ast &node);
+  std::unique_ptr<Flux::BinaryExpression>
   _transform_cmp_expression(peg::Ast &node);
 
   std::unique_ptr<Flux::RangeExpression>

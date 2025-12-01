@@ -37,6 +37,8 @@ std::string Flux::binary_op_to_string(BinaryOp op) {
     return "*";
   case BinaryOp::Divide:
     return "/";
+  case BinaryOp::Power:
+    return "^";
   case BinaryOp::And:
     return "&&";
   case BinaryOp::Or:

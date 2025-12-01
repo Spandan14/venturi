@@ -43,6 +43,7 @@ enum class BinaryOp {
   Subtract,
   Multiply,
   Divide,
+  Power,
   And,
   Or,
   Equal,

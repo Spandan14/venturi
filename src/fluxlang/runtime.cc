@@ -121,9 +121,6 @@ void Runtime::_prepare_2d() {
                                      static_cast<float>(j));
 
         if (val != 0.0f) {
-
-          std::cout << "Solid value at (" << i << ", " << j << ") for set '"
-                    << set_name << "': " << val << std::endl;
           is_solid = true;
           break;
         }
@@ -486,6 +483,8 @@ Value Runtime::eval(Flux::BinaryExpression &node) {
         return left_value * right_value;
       case Flux::BinaryOp::Divide:
         return left_value / right_value;
+      case Flux::BinaryOp::Power:
+        return std::pow(left_value, right_value);
       case Flux::BinaryOp::And:
         return (left_value != 0.0f && right_value != 0.0f) ? 1.0f : 0.0f;
       case Flux::BinaryOp::Or:
@@ -525,6 +524,8 @@ Value Runtime::eval(Flux::BinaryExpression &node) {
         return left_value * right_value;
       case Flux::BinaryOp::Divide:
         return left_value / right_value;
+      case Flux::BinaryOp::Power:
+        return std::pow(left_value, right_value);
       case Flux::BinaryOp::And:
         return (left_value != 0.0f && right_value != 0.0f) ? 1.0f : 0.0f;
       case Flux::BinaryOp::Or:
