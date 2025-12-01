@@ -9,7 +9,7 @@ public:
   Parser() = default;
   ~Parser() = default;
 
-  std::shared_ptr<peg::Ast> parse(const char *filename, Simulation2D &sim);
+  std::shared_ptr<peg::Ast> parse(const char *filename);
   // void parse(const std::string &src, Simulation3D &sim);
 
 private:

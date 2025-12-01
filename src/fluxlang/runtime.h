@@ -18,27 +18,31 @@ using Membership3D = std::function<bool(int, int, int)>;
 using Membership = std::variant<Membership2D, Membership3D>;
 
 using UnifiedValue =
-    std::variant<float, Value, std::unique_ptr<std::vector<Value>>, Membership>;
+    std::variant<Value, std::shared_ptr<std::vector<Value>>, Membership>;
 
 struct RuntimeConfig {
   std::optional<Flux::DimType> dim;
-  std::unique_ptr<Simulation> simulation;
+  std::variant<std::monostate, std::unique_ptr<Simulation<2>>,
+               std::unique_ptr<Simulation<3>>>
+      simulation;
   std::unique_ptr<Renderer> renderer;
 
-  std::unordered_map<std::string, Membership> set_memberships;
+  std::map<std::string, Membership> set_memberships;
+  std::vector<std::string> set_order;
 
   std::unordered_map<std::string, Value> density_values;
-  std::unordered_map<std::string, std::unique_ptr<std::vector<Value>>>
+  std::unordered_map<std::string, std::shared_ptr<std::vector<Value>>>
       force_values;
   std::unordered_map<std::string, Value> solid_values;
 };
 
 class Runtime {
 public:
-  Runtime() = default;
+  Runtime(std::unique_ptr<Flux::Script> script)
+      : _script(std::move(script)), _config() {};
   ~Runtime() = default;
 
-  std::unique_ptr<Simulation> run();
+  void run();
 
   static std::function<float(const UnifiedValue &, float, float)>
       extract_float_2d;
@@ -51,14 +55,18 @@ private:
   RuntimeConfig _config;
 
   void eval(Flux::Script &node);
+  void _prepare_gen();
+  void _prepare_2d();
+  void _prepare_3d();
+  void _step(float dt);
 
   UnifiedValue eval(Flux::Expression &node);
   void eval(Flux::Statement &node);
 
-  float eval(Flux::LiteralExpression &node);
+  Value eval(Flux::LiteralExpression &node);
   Value eval(Flux::GenVariableExpression &node);
   Value eval(Flux::RangeExpression &node);
-  std::unique_ptr<std::vector<Value>> eval(Flux::VectorExpression &node);
+  std::shared_ptr<std::vector<Value>> eval(Flux::VectorExpression &node);
   Membership eval(Flux::CellSelectorExpression &node);
   Value eval(Flux::BinaryExpression &node);
   Value eval(Flux::GenFuncCallExpression &node);

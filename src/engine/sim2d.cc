@@ -57,8 +57,7 @@ void Simulation2D::initialize_vel_v(
   }
 }
 
-void Simulation2D::initialize_density(
-    const std::function<float(int, int)> &initializer) {
+void Simulation2D::initialize_density(const DensityInitializer &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.densities[mac.idx(i, j)] = initializer(i, j);
@@ -67,8 +66,7 @@ void Simulation2D::initialize_density(
   }
 }
 
-void Simulation2D::initialize_forces(
-    const std::function<vec2d(int, int)> &initializer) {
+void Simulation2D::initialize_forces(const ForceInitializer &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.forces[mac.idx(i, j)] = initializer(i, j);
@@ -77,8 +75,7 @@ void Simulation2D::initialize_forces(
   }
 }
 
-void Simulation2D::initialize_solids(
-    const std::function<bool(int, int)> &initializer) {
+void Simulation2D::initialize_solids(const SolidInitializer &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
       mac.is_solid[mac.idx(i, j)] = initializer(i, j);

@@ -7,7 +7,7 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-class Simulation2D : public Simulation {
+class Simulation2D : public Simulation<2> {
 public:
   Simulation2D(int nx, int ny, float dx, float dy);
   ~Simulation2D() = default;
@@ -15,11 +15,14 @@ public:
   void step(float dt) override;
   [[nodiscard]] const MAC2D &get_mac() const { return mac; }
 
-  void initialize_vel_u(const std::function<float(int, int)> &initializer);
-  void initialize_vel_v(const std::function<float(int, int)> &initializer);
-  void initialize_density(const std::function<float(int, int)> &initializer);
-  void initialize_forces(const std::function<vec2d(int, int)> &initializer);
-  void initialize_solids(const std::function<bool(int, int)> &initializer);
+  [[deprecated]] void
+  initialize_vel_u(const std::function<float(int, int)> &initializer);
+  [[deprecated]] void
+  initialize_vel_v(const std::function<float(int, int)> &initializer);
+
+  void initialize_density(const DensityInitializer &initializer) override;
+  void initialize_forces(const ForceInitializer &initializer) override;
+  void initialize_solids(const SolidInitializer &initializer) override;
 
 private:
   MAC2D mac;

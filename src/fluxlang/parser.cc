@@ -2,8 +2,7 @@
 
 peg::parser Parser::parser = Parser::_load_grammar(FLUX_LANG_GRAMMAR_PATH);
 
-std::shared_ptr<peg::Ast> Parser::parse(const char *filename,
-                                        Simulation2D &sim) {
+std::shared_ptr<peg::Ast> Parser::parse(const char *filename) {
   source = load_text_file(filename);
 
   if (!parser.parse(source.c_str(), ast)) {

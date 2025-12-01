@@ -1,0 +1,22 @@
+dim 2D
+
+grid 220 x 100 with dx = 1
+window 1760 x 800
+
+set top_box = cells where ((75 <= j <= 80) and ((60 <= i <= 105) or (115 <= i <= 160)))
+set bottom_box = cells where ((45 <= j <= 50) and ((60 <= i <= 105) or (115 <= i <= 160)))
+
+set left_wall = cells where ((57 <= i <= 60) and (60 <= j <= 70))
+set right_wall = cells where ((159 <= i <= 162) and (60 <= j <= 70))
+
+set init_density = cells where ((10 <= j <= 30) and (80 <= i <= 140))
+
+density all = 0.15
+density init_density = 1.0
+
+solid top_box = true
+solid bottom_box = true
+solid left_wall = true
+solid right_wall = true
+
+force all = (0, -9.81)
