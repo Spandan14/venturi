@@ -2,17 +2,437 @@
 #include <fluxlang/runtime.h>
 
 std::unique_ptr<Simulation> Runtime::run() {
-  _script->accept(*this);
+  eval(*_script);
   return std::move(_config.simulation);
 }
 
-void Runtime::visit(Flux::Script &node) {
+void Runtime::eval(Flux::Script &node) {
   for (auto &stmt : node.statements) {
-    stmt->accept(*this);
+    eval(*stmt);
   }
 };
 
-void Runtime::visit(Flux::DimStatement &node) {
+// auto extract_float_2d = [](const UnifiedValue &binding, float i,
+//                            float j) -> float {
+//   if (std::holds_alternative<float>(binding)) {
+//     return std::get<float>(binding);
+//   } else if (std::holds_alternative<Value>(binding)) {
+//     const auto &val = std::get<Value>(binding);
+//     return std::get<Value2D>(val)(i, j);
+//   }
+//   throw std::runtime_error("Invalid binding type in RangeExpression!");
+// };
+//
+// auto extract_float_3d = [](const UnifiedValue &binding, float i, float j,
+//                            float k) -> float {
+//   if (std::holds_alternative<float>(binding)) {
+//     return std::get<float>(binding);
+//   } else if (std::holds_alternative<Value>(binding)) {
+//     // Determine if it's 2D or 3D based on what's stored
+//     const auto &val = std::get<Value>(binding);
+//     return std::get<Value2D>(val)(i, j);
+//   }
+//   throw std::runtime_error("Invalid binding type in RangeExpression!");
+// };
+std::function<float(const UnifiedValue &, float, float)> extract_float_2d =
+    [](const UnifiedValue &binding, float i, float j) -> float {
+  if (std::holds_alternative<float>(binding)) {
+    return std::get<float>(binding);
+  } else if (std::holds_alternative<Value>(binding)) {
+    const auto &val = std::get<Value>(binding);
+    return std::get<Value2D>(val)(i, j);
+  }
+  throw std::runtime_error("Invalid binding type in RangeExpression!");
+};
+
+std::function<float(const UnifiedValue &, float, float, float)>
+    extract_float_3d =
+        [](const UnifiedValue &binding, float i, float j, float k) -> float {
+  if (std::holds_alternative<float>(binding)) {
+    return std::get<float>(binding);
+  } else if (std::holds_alternative<Value>(binding)) {
+    // Determine if it's 2D or 3D based on what's stored
+    const auto &val = std::get<Value>(binding);
+    return std::get<Value3D>(val)(i, j, k);
+  }
+  throw std::runtime_error("Invalid binding type in RangeExpression!");
+};
+
+UnifiedValue Runtime::eval(Flux::Expression &node) {
+  if (auto literal = dynamic_cast<Flux::LiteralExpression *>(&node)) {
+    return eval(*literal);
+  }
+
+  if (auto gen_var = dynamic_cast<Flux::GenVariableExpression *>(&node)) {
+    return eval(*gen_var);
+  }
+
+  if (auto range = dynamic_cast<Flux::RangeExpression *>(&node)) {
+    return eval(*range);
+  }
+
+  if (auto vector = dynamic_cast<Flux::VectorExpression *>(&node)) {
+    return eval(*vector);
+  }
+
+  if (auto cell_selector =
+          dynamic_cast<Flux::CellSelectorExpression *>(&node)) {
+    return eval(*cell_selector);
+  }
+
+  if (auto binary = dynamic_cast<Flux::BinaryExpression *>(&node)) {
+    return eval(*binary);
+  }
+
+  if (auto gen_func = dynamic_cast<Flux::GenFuncCallExpression *>(&node)) {
+    return eval(*gen_func);
+  }
+
+  throw std::runtime_error("Unknown expression type in eval!");
+}
+
+float Runtime::eval(Flux::LiteralExpression &node) {
+  return static_cast<float>(node.value);
+};
+
+Value Runtime::eval(Flux::GenVariableExpression &node) {
+  if (!_config.dim.has_value()) {
+    throw std::runtime_error(
+        "Dimension type must be specified before using GenVariableExpression!");
+  }
+
+  if (_config.dim == Flux::DimType::Two) {
+    switch (node.var) {
+    case Flux::GenVar::I:
+      return Value2D([](float i, float j) { return i; });
+    case Flux::GenVar::J:
+      return Value2D([](float i, float j) { return j; });
+    default:
+      throw std::runtime_error("Unsupported GenVar for 2D simulation!");
+    }
+  }
+
+  if (_config.dim == Flux::DimType::Three) {
+    switch (node.var) {
+    case Flux::GenVar::I:
+      return Value3D([](float i, float j, float k) { return i; });
+    case Flux::GenVar::J:
+      return Value3D([](float i, float j, float k) { return j; });
+    case Flux::GenVar::K:
+      return Value3D([](float i, float j, float k) { return k; });
+    default:
+      throw std::runtime_error("Unsupported GenVar for 3D simulation!");
+    }
+  }
+
+  throw std::runtime_error("Unknown dimension type in GenVariableExpression!");
+};
+
+Value Runtime::eval(Flux::RangeExpression &node) {
+  if (!_config.dim.has_value()) {
+    throw std::runtime_error(
+        "Dimension type must be specified before using RangeExpression!");
+  }
+
+  auto lower_bound = eval(*node.start);
+  auto upper_bound = eval(*node.end);
+
+  if (_config.dim == Flux::DimType::Two) {
+    auto lambda = [lower_bound = std::move(lower_bound),
+                   upper_bound = std::move(upper_bound),
+                   var = node.var](float i, float j) {
+      float lb = extract_float_2d(lower_bound, i, j);
+      float ub = extract_float_2d(upper_bound, i, j);
+      float value = (var == Flux::GenVar::I) ? i : j;
+
+      return (value >= lb && value <= ub) ? 1.0f : 0.0f;
+    };
+    return Value2D(std::move(lambda));
+  }
+
+  if (_config.dim == Flux::DimType::Three) {
+    auto lambda = [lower_bound = std::move(lower_bound),
+                   upper_bound = std::move(upper_bound),
+                   var = node.var](float i, float j, float k) {
+      float lb = extract_float_3d(lower_bound, i, j, k);
+      float ub = extract_float_3d(upper_bound, i, j, k);
+      float value;
+      switch (var) {
+      case Flux::GenVar::I:
+        value = i;
+        break;
+      case Flux::GenVar::J:
+        value = j;
+        break;
+      case Flux::GenVar::K:
+        value = k;
+        break;
+      }
+
+      return (value >= lb && value <= ub) ? 1.0f : 0.0f;
+    };
+    return Value3D(std::move(lambda));
+  }
+
+  throw std::runtime_error("Unknown dimension type in RangeExpression!");
+};
+
+std::unique_ptr<std::vector<Value>>
+Runtime::eval(Flux::VectorExpression &node) {
+  std::vector<Value> components;
+  for (auto &comp_expr : node.components) {
+    components.push_back(std::get<Value>(eval(*comp_expr)));
+  };
+
+  return std::make_unique<std::vector<Value>>(std::move(components));
+};
+
+Membership Runtime::eval(Flux::CellSelectorExpression &node) {
+  auto condition = eval(*node.condition);
+
+  if (!_config.dim.has_value()) {
+    throw std::runtime_error("Dimension type must be specified before using "
+                             "CellSelectorExpression!");
+  }
+
+  if (_config.dim == Flux::DimType::Two) {
+    return Membership2D([condition = std::move(condition)](int i, int j) {
+      float cond_value;
+      if (std::holds_alternative<float>(condition)) {
+        cond_value = std::get<float>(condition);
+      } else if (std::holds_alternative<Value>(condition)) {
+        const auto &val = std::get<Value>(condition);
+        cond_value = std::get<Value2D>(val)(static_cast<float>(i),
+                                            static_cast<float>(j));
+      } else {
+        throw std::runtime_error(
+            "Invalid condition type in CellSelectorExpression for 2D!");
+      }
+
+      return cond_value != 0.0f;
+    });
+  }
+
+  if (_config.dim == Flux::DimType::Three) {
+    return Membership3D([condition = std::move(condition)](int i, int j,
+                                                           int k) {
+      float cond_value;
+      if (std::holds_alternative<float>(condition)) {
+        cond_value = std::get<float>(condition);
+      } else if (std::holds_alternative<Value>(condition)) {
+        const auto &val = std::get<Value>(condition);
+        cond_value =
+            std::get<Value3D>(val)(static_cast<float>(i), static_cast<float>(j),
+                                   static_cast<float>(k));
+      } else {
+        throw std::runtime_error(
+            "Invalid condition type in CellSelectorExpression for 3D!");
+      }
+
+      return cond_value != 0.0f;
+    });
+  }
+
+  throw std::runtime_error("Unknown dimension type in CellSelectorExpression!");
+};
+
+Value Runtime::eval(Flux::BinaryExpression &node) {
+  auto left = eval(*node.left);
+  auto right = eval(*node.right);
+
+  if (!_config.dim.has_value()) {
+    throw std::runtime_error(
+        "Dimension type must be specified before using BinaryExpression!");
+  }
+
+  if (_config.dim == Flux::DimType::Two) {
+    auto lambda = [left = std::move(left), right = std::move(right),
+                   op = node.op](float i, float j) {
+      float left_value = extract_float_2d(left, i, j);
+      float right_value = extract_float_2d(right, i, j);
+
+      switch (op) {
+      case Flux::BinaryOp::Add:
+        return left_value + right_value;
+      case Flux::BinaryOp::Subtract:
+        return left_value - right_value;
+      case Flux::BinaryOp::Multiply:
+        return left_value * right_value;
+      case Flux::BinaryOp::Divide:
+        return left_value / right_value;
+      case Flux::BinaryOp::And:
+        return (left_value != 0.0f && right_value != 0.0f) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Or:
+        return (left_value != 0.0f || right_value != 0.0f) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Equal:
+        return (left_value == right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::NotEqual:
+        return (left_value != right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Less:
+        return (left_value < right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::LessEqual:
+        return (left_value <= right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Greater:
+        return (left_value > right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::GreaterEqual:
+        return (left_value >= right_value) ? 1.0f : 0.0f;
+      default:
+        throw std::runtime_error(
+            "Unsupported BinaryOp in 2D BinaryExpression!");
+      }
+    };
+    return Value2D(std::move(lambda));
+  }
+
+  if (_config.dim == Flux::DimType::Three) {
+    auto lambda = [left = std::move(left), right = std::move(right),
+                   op = node.op](float i, float j, float k) {
+      float left_value = extract_float_3d(left, i, j, k);
+      float right_value = extract_float_3d(right, i, j, k);
+
+      switch (op) {
+      case Flux::BinaryOp::Add:
+        return left_value + right_value;
+      case Flux::BinaryOp::Subtract:
+        return left_value - right_value;
+      case Flux::BinaryOp::Multiply:
+        return left_value * right_value;
+      case Flux::BinaryOp::Divide:
+        return left_value / right_value;
+      case Flux::BinaryOp::And:
+        return (left_value != 0.0f && right_value != 0.0f) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Or:
+        return (left_value != 0.0f || right_value != 0.0f) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Equal:
+        return (left_value == right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::NotEqual:
+        return (left_value != right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Less:
+        return (left_value < right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::LessEqual:
+        return (left_value <= right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::Greater:
+        return (left_value > right_value) ? 1.0f : 0.0f;
+      case Flux::BinaryOp::GreaterEqual:
+        return (left_value >= right_value) ? 1.0f : 0.0f;
+      default:
+        throw std::runtime_error(
+            "Unsupported BinaryOp in 3D BinaryExpression!");
+      }
+    };
+    return Value3D(std::move(lambda));
+  }
+
+  throw std::runtime_error("Unknown dimension type in BinaryExpression!");
+}
+
+Value Runtime::eval(Flux::GenFuncCallExpression &node) {
+  auto argument = eval(*node.argument);
+
+  if (!_config.dim.has_value()) {
+    throw std::runtime_error(
+        "Dimension type must be specified before using GenFuncCallExpression!");
+  }
+
+  if (_config.dim == Flux::DimType::Two) {
+    auto lambda = [argument = std::move(argument), func = node.func](float i,
+                                                                     float j) {
+      float arg_value = extract_float_2d(argument, i, j);
+
+      switch (func) {
+      case Flux::GenFunc::Sin:
+        return std::sin(arg_value);
+      case Flux::GenFunc::Cos:
+        return std::cos(arg_value);
+      case Flux::GenFunc::Tan:
+        return std::tan(arg_value);
+      case Flux::GenFunc::Abs:
+        return std::abs(arg_value);
+      case Flux::GenFunc::Sqrt:
+        return std::sqrt(arg_value);
+      case Flux::GenFunc::Log:
+        return std::log(arg_value);
+      case Flux::GenFunc::Exp:
+        return std::exp(arg_value);
+      default:
+        throw std::runtime_error(
+            "Unsupported GenFunc in 2D GenFuncCallExpression!");
+      }
+    };
+    return Value2D(std::move(lambda));
+  }
+
+  if (_config.dim == Flux::DimType::Three) {
+    auto lambda = [argument = std::move(argument),
+                   func = node.func](float i, float j, float k) {
+      float arg_value = extract_float_3d(argument, i, j, k);
+
+      switch (func) {
+      case Flux::GenFunc::Sin:
+        return std::sin(arg_value);
+      case Flux::GenFunc::Cos:
+        return std::cos(arg_value);
+      case Flux::GenFunc::Tan:
+        return std::tan(arg_value);
+      case Flux::GenFunc::Abs:
+        return std::abs(arg_value);
+      case Flux::GenFunc::Sqrt:
+        return std::sqrt(arg_value);
+      case Flux::GenFunc::Log:
+        return std::log(arg_value);
+      case Flux::GenFunc::Exp:
+        return std::exp(arg_value);
+      default:
+        throw std::runtime_error(
+            "Unsupported GenFunc in 3D GenFuncCallExpression!");
+      }
+    };
+    return Value3D(std::move(lambda));
+  }
+
+  throw std::runtime_error("Unknown dimension type in GenFuncCallExpression!");
+};
+
+void Runtime::eval(Flux::Statement &node) {
+  if (auto dim_stmt = dynamic_cast<Flux::DimStatement *>(&node)) {
+    eval(*dim_stmt);
+    return;
+  }
+
+  if (auto grid_stmt = dynamic_cast<Flux::GridStatement *>(&node)) {
+    eval(*grid_stmt);
+    return;
+  }
+
+  if (auto window_stmt = dynamic_cast<Flux::WindowStatement *>(&node)) {
+    eval(*window_stmt);
+    return;
+  }
+
+  if (auto set_stmt = dynamic_cast<Flux::SetStatement *>(&node)) {
+    eval(*set_stmt);
+    return;
+  }
+
+  if (auto density_stmt = dynamic_cast<Flux::DensityStatement *>(&node)) {
+    eval(*density_stmt);
+    return;
+  }
+
+  if (auto force_stmt = dynamic_cast<Flux::ForceStatement *>(&node)) {
+    eval(*force_stmt);
+    return;
+  }
+
+  if (auto solid_stmt = dynamic_cast<Flux::SolidStatement *>(&node)) {
+    eval(*solid_stmt);
+    return;
+  }
+
+  throw std::runtime_error("Unknown statement type in eval!");
+}
+
+void Runtime::eval(Flux::DimStatement &node) {
   _config.dim = node.dim;
   if (_config.dim != Flux::DimType::Two ||
       _config.dim != Flux::DimType::Three) {
@@ -20,7 +440,7 @@ void Runtime::visit(Flux::DimStatement &node) {
   }
 };
 
-void Runtime::visit(Flux::GridStatement &node) {
+void Runtime::eval(Flux::GridStatement &node) {
   if (!_config.dim.has_value()) {
     throw std::runtime_error(
         "Dimension type must be specified before GridStatement!");
@@ -46,7 +466,7 @@ void Runtime::visit(Flux::GridStatement &node) {
   }
 };
 
-void Runtime::visit(Flux::WindowStatement &node) {
+void Runtime::eval(Flux::WindowStatement &node) {
   if (!_config.dim.has_value()) {
     throw std::runtime_error(
         "Dimension type must be specified before WindowStatement!");
@@ -58,10 +478,8 @@ void Runtime::visit(Flux::WindowStatement &node) {
           "WindowStatement size mismatch for 2D simulation!");
     }
 
-    int width = static_cast<int>(
-        dynamic_cast<Flux::LiteralExpression *>(node.sizes[0].get())->value);
-    int height = static_cast<int>(
-        dynamic_cast<Flux::LiteralExpression *>(node.sizes[1].get())->value);
+    float width = std::get<float>(eval(*node.sizes[0]));
+    float height = std::get<float>(eval(*node.sizes[1]));
 
     // Create renderer
     _config.renderer = std::make_unique<Renderer2D>(
@@ -74,10 +492,22 @@ void Runtime::visit(Flux::WindowStatement &node) {
   }
 };
 
-void Runtime::visit(Flux::SetStatement &node) {};
+void Runtime::eval(Flux::SetStatement &node) {
+  auto membership = eval(*node.selector);
+  _config.set_memberships[node.identifier] = std::move(membership);
+};
 
-void Runtime::visit(Flux::DensityStatement &node) {};
+void Runtime::eval(Flux::DensityStatement &node) {
+  auto value = std::get<Value>(eval(*node.value));
+  _config.density_values[node.identifier] = std::move(value);
+};
 
-void Runtime::visit(Flux::ForceStatement &node) {};
+void Runtime::eval(Flux::ForceStatement &node) {
+  auto value = eval(*node.value);
+  _config.force_values[node.identifier] = std::move(value);
+};
 
-void Runtime::visit(Flux::SolidStatement &node) {};
+void Runtime::eval(Flux::SolidStatement &node) {
+  auto membership = std::get<Value>(eval(*node.value));
+  _config.solid_values[node.identifier] = std::move(membership);
+};
