@@ -7,6 +7,7 @@ Statement      <- DimStmt
                 / DensityStmt
                 / ForceStmt
                 / SolidStmt
+                / FlowStmt
 
 DimStmt        <- 'dim' _ DimType
 DimType        <- '2D' / '3D'
@@ -20,6 +21,7 @@ CellSelector   <- 'cells' _ 'where' _ Expr
 DensityStmt    <- 'density' _ Target _ '=' _ Expr 
 ForceStmt      <- 'force'   _ Target _ '=' _ VectorExpr 
 SolidStmt      <- 'solid'   _ Target _ '=' _ Expr 
+FlowStmt       <- 'flow'    _ Target _ '=' _ Expr
 
 Target         <- 'all' / Identifier
 
@@ -41,7 +43,7 @@ Primary        <- Number / Boolean / Var / FuncCall / '(' _ Expr _ ')'
 
 FuncCall       <- Identifier '(' _ (Expr ( _ ',' _ Expr )*)? _ ')'
 
-Var            <- < 'i' / 'j' / 'k' >
+Var            <- < 'i' / 'j' / 'k' / 't' >
 CmpOp          <- < '==' / '!=' / '<=' / '<' / '>=' / '>' >
 Number         <- < '-'? [0-9]+ ('.' [0-9]+)? >
 Int            <- < '-'? [0-9]+ >

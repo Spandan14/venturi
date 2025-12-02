@@ -28,6 +28,8 @@ private:
   _transform_force_statement(peg::Ast &node);
   std::unique_ptr<Flux::SolidStatement>
   _transform_solid_statement(peg::Ast &node);
+  std::unique_ptr<Flux::FlowStatement>
+  _transform_flow_statement(peg::Ast &node);
 
   std::unique_ptr<Flux::Expression> _transform_expression(peg::Ast &node);
 

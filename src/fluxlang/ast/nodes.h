@@ -54,7 +54,7 @@ enum class BinaryOp {
   GreaterEqual
 };
 
-enum class GenVar { I, J, K };
+enum class GenVar { I, J, K, T };
 
 enum class GenFunc { Sin, Cos, Tan, Abs, Sqrt, Log, Exp };
 
@@ -201,6 +201,17 @@ public:
   std::string identifier;
   std::unique_ptr<Expression> value;
   SolidStatement(TargetType tt, std::string id, std::unique_ptr<Expression> val)
+      : target_type(tt), identifier(std::move(id)), value(std::move(val)) {}
+  void accept(Visitor &visitor) override;
+  std::string to_string() override;
+};
+
+class FlowStatement : public Statement {
+public:
+  TargetType target_type;
+  std::string identifier;
+  std::unique_ptr<Expression> value;
+  FlowStatement(TargetType tt, std::string id, std::unique_ptr<Expression> val)
       : target_type(tt), identifier(std::move(id)), value(std::move(val)) {}
   void accept(Visitor &visitor) override;
   std::string to_string() override;

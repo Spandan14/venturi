@@ -66,6 +66,8 @@ std::string Flux::gen_var_to_string(GenVar gv) {
     return "j";
   case GenVar::K:
     return "k";
+  case GenVar::T:
+    return "t";
   }
 }
 
@@ -171,4 +173,8 @@ std::string Flux::ForceStatement::to_string() {
 
 std::string Flux::SolidStatement::to_string() {
   return "solid " + identifier + " = " + value->to_string() + ";";
+}
+
+std::string Flux::FlowStatement::to_string() {
+  return "flow " + identifier + " = " + value->to_string() + ";";
 }

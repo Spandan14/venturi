@@ -27,6 +27,8 @@ void Simulation2D::step(float dt) {
 
   mac_next.current_time += dt;
 
+  _apply_flows();
+
   // total_density = 0.0f;
   // for (float d : mac_next.densities) {
   //   total_density += d;
@@ -60,8 +62,8 @@ void Simulation2D::initialize_vel_v(
 void Simulation2D::initialize_density(const DensityInitializer &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
-      mac.densities[mac.idx(i, j)] = initializer(i, j);
-      mac_next.densities[mac.idx(i, j)] = initializer(i, j);
+      mac.densities[mac.idx(i, j)] = initializer(i, j, 0);
+      mac_next.densities[mac.idx(i, j)] = initializer(i, j, 0);
     }
   }
 }
@@ -69,8 +71,8 @@ void Simulation2D::initialize_density(const DensityInitializer &initializer) {
 void Simulation2D::initialize_forces(const ForceInitializer &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
-      mac.forces[mac.idx(i, j)] = initializer(i, j);
-      mac_next.forces[mac.idx(i, j)] = initializer(i, j);
+      mac.forces[mac.idx(i, j)] = initializer(i, j, 0);
+      mac_next.forces[mac.idx(i, j)] = initializer(i, j, 0);
     }
   }
 }
@@ -78,10 +80,10 @@ void Simulation2D::initialize_forces(const ForceInitializer &initializer) {
 void Simulation2D::initialize_solids(const SolidInitializer &initializer) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx; ++i) {
-      mac.is_solid[mac.idx(i, j)] = initializer(i, j);
-      mac_next.is_solid[mac.idx(i, j)] = initializer(i, j);
+      mac.is_solid[mac.idx(i, j)] = initializer(i, j, 0);
+      mac_next.is_solid[mac.idx(i, j)] = initializer(i, j, 0);
 
-      if (initializer(i, j)) {
+      if (mac.is_solid[mac.idx(i, j)]) {
         // solid cell, set velocities to 0
         mac.u[mac.u_idx(i, j)] = 0.0f;
         mac.u[mac.u_idx(i + 1, j)] = 0.0f;
@@ -97,6 +99,10 @@ void Simulation2D::initialize_solids(const SolidInitializer &initializer) {
       }
     }
   }
+}
+
+void Simulation2D::initialize_flows(const FlowGenerator &generator) {
+  flow_generator = generator;
 }
 
 void Simulation2D::_apply_forces(float dt) {
@@ -127,6 +133,17 @@ void Simulation2D::_apply_forces(float dt) {
       force *= 0.5f;
 
       mac.v[mac.v_idx(i, j)] += force * dt;
+    }
+  }
+}
+
+void Simulation2D::_apply_flows() {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      float added_density = flow_generator(i, j, mac_next.current_time);
+      mac_next.densities[mac_next.idx(i, j)] += added_density;
+      mac_next.densities[mac_next.idx(i, j)] =
+          std::max(0.0f, mac_next.densities[mac_next.idx(i, j)]);
     }
   }
 }

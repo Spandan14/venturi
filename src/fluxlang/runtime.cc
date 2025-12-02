@@ -41,24 +41,24 @@ void Runtime::_prepare_gen() {
 
   // make membership for all as well
   if (_config.dim == Flux::DimType::Two) {
-    auto all_2d = [](int i, int j) { return true; };
+    auto all_2d = [](int i, int j, float t) { return true; };
     Membership2D all_membership = Membership2D(all_2d);
     _config.set_memberships["all"] = Membership2D(all_membership);
   } else if (_config.dim == Flux::DimType::Three) {
-    auto all_3d = [](int i, int j, int k) { return true; };
+    auto all_3d = [](int i, int j, int k, float t) { return true; };
     Membership3D all_membership = Membership3D(all_3d);
     _config.set_memberships["all"] = Membership3D(all_membership);
   }
 }
 
 void Runtime::_prepare_2d() {
-  auto sets_lambda = [this](int i, int j) {
+  auto sets_lambda = [this](int i, int j, float t) {
     std::vector<std::string> sets;
     for (const auto &set_name : _config.set_order) {
       const auto &membership = _config.set_memberships[set_name];
       if (std::holds_alternative<Membership2D>(membership)) {
         auto &mem_func = std::get<Membership2D>(membership);
-        if (mem_func(i, j)) {
+        if (mem_func(i, j, t)) {
           sets.push_back(set_name);
         }
       }
@@ -66,16 +66,16 @@ void Runtime::_prepare_2d() {
     return sets;
   };
 
-  auto density_initializer = [this, sets_lambda](int i, int j) {
+  auto density_initializer = [this, sets_lambda](int i, int j, float t) {
     float total_density = 0.0f;
 
-    std::vector<std::string> sets_to_check = sets_lambda(i, j);
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, t);
 
     for (const auto &set_name : sets_to_check) {
       if (_config.density_values.count(set_name) > 0) {
         float density =
             extract_float_2d(_config.density_values[set_name],
-                             static_cast<float>(i), static_cast<float>(j));
+                             static_cast<float>(i), static_cast<float>(j), t);
 
         total_density += density;
       }
@@ -84,10 +84,10 @@ void Runtime::_prepare_2d() {
     return total_density;
   };
 
-  auto force_initializer = [this, sets_lambda](int i, int j) {
+  auto force_initializer = [this, sets_lambda](int i, int j, float t) {
     vec2d total_force(0.0f, 0.0f);
 
-    std::vector<std::string> sets_to_check = sets_lambda(i, j);
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, t);
     for (const auto &set_name : sets_to_check) {
       if (_config.force_values.count(set_name) > 0) {
         auto &force_values = _config.force_values[set_name]; // vector of Value
@@ -99,9 +99,9 @@ void Runtime::_prepare_2d() {
         }
 
         float fx = extract_float_2d((*force_values)[0], static_cast<float>(i),
-                                    static_cast<float>(j));
+                                    static_cast<float>(j), t);
         float fy = extract_float_2d((*force_values)[1], static_cast<float>(i),
-                                    static_cast<float>(j));
+                                    static_cast<float>(j), t);
 
         total_force += vec2d(fx, fy);
       }
@@ -110,15 +110,15 @@ void Runtime::_prepare_2d() {
     return total_force;
   };
 
-  auto solid_initializer = [this, sets_lambda](int i, int j) {
+  auto solid_initializer = [this, sets_lambda](int i, int j, float t) {
     bool is_solid = false;
 
-    std::vector<std::string> sets_to_check = sets_lambda(i, j);
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, t);
     for (const auto &set_name : sets_to_check) {
       if (_config.solid_values.count(set_name) > 0) {
         auto &solid_value = _config.solid_values[set_name];
         float val = extract_float_2d(solid_value, static_cast<float>(i),
-                                     static_cast<float>(j));
+                                     static_cast<float>(j), t);
 
         if (val != 0.0f) {
           is_solid = true;
@@ -130,21 +130,39 @@ void Runtime::_prepare_2d() {
     return is_solid;
   };
 
+  auto flow_generator = [this, sets_lambda](int i, int j, float t) {
+    float total_flow = 0.0f;
+
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, t);
+    for (const auto &set_name : sets_to_check) {
+      if (_config.flow_values.count(set_name) > 0) {
+        auto &flow_value = _config.flow_values[set_name];
+        float fx = extract_float_2d(flow_value, static_cast<float>(i),
+                                    static_cast<float>(j), t);
+
+        total_flow += fx;
+      }
+    }
+
+    return total_flow;
+  };
+
   auto &sim = std::get<std::unique_ptr<Simulation<2>>>(_config.simulation);
   sim->initialize_density(density_initializer);
   sim->initialize_forces(force_initializer);
   sim->initialize_solids(solid_initializer);
+  sim->initialize_flows(flow_generator);
 }
 
 void Runtime::_prepare_3d() {
 
-  auto sets_lambda = [this](int i, int j, int k) {
+  auto sets_lambda = [this](int i, int j, int k, float t) {
     std::vector<std::string> sets;
     for (const auto &set_name : _config.set_order) {
       const auto &membership = _config.set_memberships[set_name];
       if (std::holds_alternative<Membership3D>(membership)) {
         auto &mem_func = std::get<Membership3D>(membership);
-        if (mem_func(i, j, k)) {
+        if (mem_func(i, j, k, t)) {
           sets.push_back(set_name);
         }
       }
@@ -152,15 +170,15 @@ void Runtime::_prepare_3d() {
     return sets;
   };
 
-  auto density_initializer = [this, sets_lambda](int i, int j, int k) {
+  auto density_initializer = [this, sets_lambda](int i, int j, int k, float t) {
     float total_density = 0.0f;
 
-    std::vector<std::string> sets_to_check = sets_lambda(i, j, k);
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, k, t);
     for (const auto &set_name : sets_to_check) {
       if (_config.density_values.count(set_name) > 0) {
         float density = extract_float_3d(
             _config.density_values[set_name], static_cast<float>(i),
-            static_cast<float>(j), static_cast<float>(k));
+            static_cast<float>(j), static_cast<float>(k), t);
 
         total_density += density;
       }
@@ -169,10 +187,10 @@ void Runtime::_prepare_3d() {
     return total_density;
   };
 
-  auto force_initializer = [this, sets_lambda](int i, int j, int k) {
+  auto force_initializer = [this, sets_lambda](int i, int j, int k, float t) {
     vec3d total_force(0.0f, 0.0f, 0.0f);
 
-    std::vector<std::string> sets_to_check = sets_lambda(i, j, k);
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, k, t);
     for (const auto &set_name : sets_to_check) {
       if (_config.force_values.count(set_name) > 0) {
         auto &force_values = _config.force_values[set_name]; // vector of Value
@@ -185,13 +203,13 @@ void Runtime::_prepare_3d() {
 
         float fx =
             extract_float_3d((*force_values)[0], static_cast<float>(i),
-                             static_cast<float>(j), static_cast<float>(k));
+                             static_cast<float>(j), static_cast<float>(k), t);
         float fy =
             extract_float_3d((*force_values)[1], static_cast<float>(i),
-                             static_cast<float>(j), static_cast<float>(k));
+                             static_cast<float>(j), static_cast<float>(k), t);
         float fz =
             extract_float_3d((*force_values)[2], static_cast<float>(i),
-                             static_cast<float>(j), static_cast<float>(k));
+                             static_cast<float>(j), static_cast<float>(k), t);
 
         total_force += vec3d(fx, fy, fz);
       }
@@ -200,24 +218,20 @@ void Runtime::_prepare_3d() {
     return total_force;
   };
 
-  auto solid_initializer = [this, sets_lambda](int i, int j, int k) {
+  auto solid_initializer = [this, sets_lambda](int i, int j, int k, float t) {
     bool is_solid = false;
 
-    std::vector<std::string> sets_to_check = sets_lambda(i, j, k);
-    for (const auto &[set_name, membership] : _config.set_memberships) {
-      if (std::holds_alternative<Membership3D>(membership)) {
-        auto &mem_func = std::get<Membership3D>(membership);
-        if (mem_func(i, j, k)) {
-          if (_config.solid_values.count(set_name) > 0) {
-            auto &solid_value = _config.solid_values[set_name];
-            float val =
-                extract_float_3d(solid_value, static_cast<float>(i),
-                                 static_cast<float>(j), static_cast<float>(k));
-            if (val >= 0.5f) {
-              is_solid = true;
-              break;
-            }
-          }
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, k, t);
+    for (const auto &set_name : sets_to_check) {
+      if (_config.solid_values.count(set_name) > 0) {
+        auto &solid_value = _config.solid_values[set_name];
+        float val =
+            extract_float_3d(solid_value, static_cast<float>(i),
+                             static_cast<float>(j), static_cast<float>(k), t);
+
+        if (val != 0.0f) {
+          is_solid = true;
+          break;
         }
       }
     }
@@ -225,10 +239,29 @@ void Runtime::_prepare_3d() {
     return is_solid;
   };
 
+  auto flow_generator = [this, sets_lambda](int i, int j, int k, float t) {
+    float total_flow = 0.0f;
+
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, k, t);
+    for (const auto &set_name : sets_to_check) {
+      if (_config.flow_values.count(set_name) > 0) {
+        auto &flow_value = _config.flow_values[set_name];
+        float fx =
+            extract_float_3d(flow_value, static_cast<float>(i),
+                             static_cast<float>(j), static_cast<float>(k), t);
+
+        total_flow += fx;
+      }
+    }
+
+    return total_flow;
+  };
+
   auto &sim = std::get<std::unique_ptr<Simulation<3>>>(_config.simulation);
   sim->initialize_density(density_initializer);
   sim->initialize_forces(force_initializer);
   sim->initialize_solids(solid_initializer);
+  sim->initialize_flows(flow_generator);
 }
 
 void Runtime::_step(float dt) {
@@ -249,23 +282,23 @@ void Runtime::eval(Flux::Script &node) {
   }
 };
 
-std::function<float(const UnifiedValue &, float, float)>
+std::function<float(const UnifiedValue &, float, float, float)>
     Runtime::extract_float_2d =
-        [](const UnifiedValue &binding, float i, float j) -> float {
+        [](const UnifiedValue &binding, float i, float j, float t) -> float {
   if (std::holds_alternative<Value>(binding)) {
     const auto &val = std::get<Value>(binding);
-    return std::get<Value2D>(val)(i, j);
+    return std::get<Value2D>(val)(i, j, t);
   }
   throw std::runtime_error("Invalid binding type in RangeExpression!");
 };
 
-std::function<float(const UnifiedValue &, float, float, float)>
-    Runtime::extract_float_3d =
-        [](const UnifiedValue &binding, float i, float j, float k) -> float {
+std::function<float(const UnifiedValue &, float, float, float, float)>
+    Runtime::extract_float_3d = [](const UnifiedValue &binding, float i,
+                                   float j, float k, float t) -> float {
   if (std::holds_alternative<Value>(binding)) {
     // Determine if it's 2D or 3D based on what's stored
     const auto &val = std::get<Value>(binding);
-    return std::get<Value3D>(val)(i, j, k);
+    return std::get<Value3D>(val)(i, j, k, t);
   }
   throw std::runtime_error("Invalid binding type in RangeExpression!");
 };
@@ -311,12 +344,13 @@ Value Runtime::eval(Flux::LiteralExpression &node) {
 
   if (_config.dim == Flux::DimType::Two) {
     float value = static_cast<float>(node.value);
-    return Value2D([value](float i, float j) { return value; });
+    return Value2D([value](float i, float j, float t) { return value; });
   }
 
   if (_config.dim == Flux::DimType::Three) {
     float value = static_cast<float>(node.value);
-    return Value3D([value](float i, float j, float k) { return value; });
+    return Value3D(
+        [value](float i, float j, float k, float t) { return value; });
   }
 
   throw std::runtime_error("Unknown dimension type in LiteralExpression!");
@@ -331,9 +365,11 @@ Value Runtime::eval(Flux::GenVariableExpression &node) {
   if (_config.dim == Flux::DimType::Two) {
     switch (node.var) {
     case Flux::GenVar::I:
-      return Value2D([](float i, float j) { return i; });
+      return Value2D([](float i, float j, float t) { return i; });
     case Flux::GenVar::J:
-      return Value2D([](float i, float j) { return j; });
+      return Value2D([](float i, float j, float t) { return j; });
+    case Flux::GenVar::T:
+      return Value2D([](float i, float j, float t) { return t; });
     default:
       throw std::runtime_error("Unsupported GenVar for 2D simulation!");
     }
@@ -342,11 +378,13 @@ Value Runtime::eval(Flux::GenVariableExpression &node) {
   if (_config.dim == Flux::DimType::Three) {
     switch (node.var) {
     case Flux::GenVar::I:
-      return Value3D([](float i, float j, float k) { return i; });
+      return Value3D([](float i, float j, float k, float t) { return i; });
     case Flux::GenVar::J:
-      return Value3D([](float i, float j, float k) { return j; });
+      return Value3D([](float i, float j, float k, float t) { return j; });
     case Flux::GenVar::K:
-      return Value3D([](float i, float j, float k) { return k; });
+      return Value3D([](float i, float j, float k, float t) { return k; });
+    case Flux::GenVar::T:
+      return Value3D([](float i, float j, float k, float t) { return t; });
     default:
       throw std::runtime_error("Unsupported GenVar for 3D simulation!");
     }
@@ -367,10 +405,25 @@ Value Runtime::eval(Flux::RangeExpression &node) {
   if (_config.dim == Flux::DimType::Two) {
     auto lambda = [lower_bound = std::move(lower_bound),
                    upper_bound = std::move(upper_bound),
-                   var = node.var](float i, float j) {
-      float lb = extract_float_2d(lower_bound, i, j);
-      float ub = extract_float_2d(upper_bound, i, j);
-      float value = (var == Flux::GenVar::I) ? i : j;
+                   var = node.var](float i, float j, float t) {
+      float lb = extract_float_2d(lower_bound, i, j, t);
+      float ub = extract_float_2d(upper_bound, i, j, t);
+      float value;
+      switch (var) {
+      case Flux::GenVar::I:
+        value = i;
+        break;
+      case Flux::GenVar::J:
+        value = j;
+        break;
+      case Flux::GenVar::K:
+        throw std::runtime_error(
+            "GenVar K is not valid in 2D RangeExpression!");
+        break;
+      case Flux::GenVar::T:
+        value = t;
+        break;
+      }
 
       return (value >= lb && value <= ub) ? 1.0f : 0.0f;
     };
@@ -380,9 +433,9 @@ Value Runtime::eval(Flux::RangeExpression &node) {
   if (_config.dim == Flux::DimType::Three) {
     auto lambda = [lower_bound = std::move(lower_bound),
                    upper_bound = std::move(upper_bound),
-                   var = node.var](float i, float j, float k) {
-      float lb = extract_float_3d(lower_bound, i, j, k);
-      float ub = extract_float_3d(upper_bound, i, j, k);
+                   var = node.var](float i, float j, float k, float t) {
+      float lb = extract_float_3d(lower_bound, i, j, k, t);
+      float ub = extract_float_3d(upper_bound, i, j, k, t);
       float value;
       switch (var) {
       case Flux::GenVar::I:
@@ -394,6 +447,8 @@ Value Runtime::eval(Flux::RangeExpression &node) {
       case Flux::GenVar::K:
         value = k;
         break;
+      case Flux::GenVar::T:
+        value = t;
       }
 
       return (value >= lb && value <= ub) ? 1.0f : 0.0f;
@@ -423,30 +478,31 @@ Membership Runtime::eval(Flux::CellSelectorExpression &node) {
   }
 
   if (_config.dim == Flux::DimType::Two) {
-    return Membership2D([condition = std::move(condition)](int i, int j) {
-      float cond_value;
-      if (std::holds_alternative<Value>(condition)) {
-        const auto &val = std::get<Value>(condition);
-        cond_value = std::get<Value2D>(val)(static_cast<float>(i),
-                                            static_cast<float>(j));
-      } else {
-        throw std::runtime_error(
-            "Invalid condition type in CellSelectorExpression for 2D!");
-      }
+    return Membership2D(
+        [condition = std::move(condition)](int i, int j, float t) {
+          float cond_value;
+          if (std::holds_alternative<Value>(condition)) {
+            const auto &val = std::get<Value>(condition);
+            cond_value = std::get<Value2D>(val)(static_cast<float>(i),
+                                                static_cast<float>(j), t);
+          } else {
+            throw std::runtime_error(
+                "Invalid condition type in CellSelectorExpression for 2D!");
+          }
 
-      return cond_value != 0.0f;
-    });
+          return cond_value != 0.0f;
+        });
   }
 
   if (_config.dim == Flux::DimType::Three) {
-    return Membership3D([condition = std::move(condition)](int i, int j,
-                                                           int k) {
+    return Membership3D([condition = std::move(condition)](int i, int j, int k,
+                                                           float t) {
       float cond_value;
       if (std::holds_alternative<Value>(condition)) {
         const auto &val = std::get<Value>(condition);
         cond_value =
             std::get<Value3D>(val)(static_cast<float>(i), static_cast<float>(j),
-                                   static_cast<float>(k));
+                                   static_cast<float>(k), t);
       } else {
         throw std::runtime_error(
             "Invalid condition type in CellSelectorExpression for 3D!");
@@ -470,9 +526,9 @@ Value Runtime::eval(Flux::BinaryExpression &node) {
 
   if (_config.dim == Flux::DimType::Two) {
     auto lambda = [left = std::move(left), right = std::move(right),
-                   op = node.op](float i, float j) {
-      float left_value = extract_float_2d(left, i, j);
-      float right_value = extract_float_2d(right, i, j);
+                   op = node.op](float i, float j, float t) {
+      float left_value = extract_float_2d(left, i, j, t);
+      float right_value = extract_float_2d(right, i, j, t);
 
       switch (op) {
       case Flux::BinaryOp::Add:
@@ -511,9 +567,9 @@ Value Runtime::eval(Flux::BinaryExpression &node) {
 
   if (_config.dim == Flux::DimType::Three) {
     auto lambda = [left = std::move(left), right = std::move(right),
-                   op = node.op](float i, float j, float k) {
-      float left_value = extract_float_3d(left, i, j, k);
-      float right_value = extract_float_3d(right, i, j, k);
+                   op = node.op](float i, float j, float k, float t) {
+      float left_value = extract_float_3d(left, i, j, k, t);
+      float right_value = extract_float_3d(right, i, j, k, t);
 
       switch (op) {
       case Flux::BinaryOp::Add:
@@ -562,9 +618,9 @@ Value Runtime::eval(Flux::GenFuncCallExpression &node) {
   }
 
   if (_config.dim == Flux::DimType::Two) {
-    auto lambda = [argument = std::move(argument), func = node.func](float i,
-                                                                     float j) {
-      float arg_value = extract_float_2d(argument, i, j);
+    auto lambda = [argument = std::move(argument),
+                   func = node.func](float i, float j, float t) {
+      float arg_value = extract_float_2d(argument, i, j, t);
 
       switch (func) {
       case Flux::GenFunc::Sin:
@@ -591,8 +647,8 @@ Value Runtime::eval(Flux::GenFuncCallExpression &node) {
 
   if (_config.dim == Flux::DimType::Three) {
     auto lambda = [argument = std::move(argument),
-                   func = node.func](float i, float j, float k) {
-      float arg_value = extract_float_3d(argument, i, j, k);
+                   func = node.func](float i, float j, float k, float t) {
+      float arg_value = extract_float_3d(argument, i, j, k, t);
 
       switch (func) {
       case Flux::GenFunc::Sin:
@@ -656,6 +712,11 @@ void Runtime::eval(Flux::Statement &node) {
     return;
   }
 
+  if (auto flow_stmt = dynamic_cast<Flux::FlowStatement *>(&node)) {
+    eval(*flow_stmt);
+    return;
+  }
+
   throw std::runtime_error("Unknown statement type in eval!");
 }
 
@@ -706,9 +767,9 @@ void Runtime::eval(Flux::WindowStatement &node) {
     }
 
     float width =
-        std::get<Value2D>(std::get<Value>(eval(*node.sizes[0])))(0, 0);
+        std::get<Value2D>(std::get<Value>(eval(*node.sizes[0])))(0, 0, 0);
     float height =
-        std::get<Value2D>(std::get<Value>(eval(*node.sizes[1])))(0, 0);
+        std::get<Value2D>(std::get<Value>(eval(*node.sizes[1])))(0, 0, 0);
 
     auto &sim = std::get<std::unique_ptr<Simulation<2>>>(_config.simulation);
 
@@ -740,4 +801,9 @@ void Runtime::eval(Flux::ForceStatement &node) {
 void Runtime::eval(Flux::SolidStatement &node) {
   auto membership = std::get<Value>(eval(*node.value));
   _config.solid_values[node.identifier] = std::move(membership);
+};
+
+void Runtime::eval(Flux::FlowStatement &node) {
+  auto membership = std::get<Value>(eval(*node.value));
+  _config.flow_values[node.identifier] = std::move(membership);
 };

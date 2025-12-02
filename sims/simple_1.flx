@@ -11,6 +11,8 @@ set right_wall = cells where ((159 <= i <= 162) and (55 <= j <= 70))
 
 set init_density = cells where ((10 <= j <= 30) and (80 <= i <= 140))
 
+set left_sink = cells where ((85 <= j <= 90) and ((60 <= i <= 160)))
+
 density all = 0.15
 density init_density = 1.0
 
@@ -27,3 +29,6 @@ force all = (
     - 9.81
     - ((i - 150) / ((i - 150)^2 + (j - 50)^2 + 20) * 2000)
 )
+
+flow init_density = (0.15 + (0.10 * sin(5 * t))) * ((i / 110) ^ 2)
+flow left_sink = -0.05 

@@ -18,6 +18,7 @@ class SetStatement;
 class DensityStatement;
 class ForceStatement;
 class SolidStatement;
+class FlowStatement;
 
 class Visitor {
 public:
@@ -40,5 +41,6 @@ public:
   virtual void visit(DensityStatement &node) = 0;
   virtual void visit(ForceStatement &node) = 0;
   virtual void visit(SolidStatement &node) = 0;
+  virtual void visit(FlowStatement &node) = 0;
 };
 } // namespace Flux

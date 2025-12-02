@@ -9,12 +9,12 @@
 #include <renderer/renderer.h>
 #include <renderer/renderer_2d.h>
 
-using Value2D = std::function<float(float, float)>;
-using Value3D = std::function<float(float, float, float)>;
+using Value2D = std::function<float(float, float, float)>;
+using Value3D = std::function<float(float, float, float, float)>;
 using Value = std::variant<Value2D, Value3D>;
 
-using Membership2D = std::function<bool(int, int)>;
-using Membership3D = std::function<bool(int, int, int)>;
+using Membership2D = std::function<bool(int, int, float)>;
+using Membership3D = std::function<bool(int, int, int, float)>;
 using Membership = std::variant<Membership2D, Membership3D>;
 
 using UnifiedValue =
@@ -34,6 +34,7 @@ struct RuntimeConfig {
   std::unordered_map<std::string, std::shared_ptr<std::vector<Value>>>
       force_values;
   std::unordered_map<std::string, Value> solid_values;
+  std::unordered_map<std::string, Value> flow_values;
 };
 
 class Runtime {
@@ -44,9 +45,9 @@ public:
 
   void run();
 
-  static std::function<float(const UnifiedValue &, float, float)>
-      extract_float_2d;
   static std::function<float(const UnifiedValue &, float, float, float)>
+      extract_float_2d;
+  static std::function<float(const UnifiedValue &, float, float, float, float)>
       extract_float_3d;
 
 private:
@@ -78,4 +79,5 @@ private:
   void eval(Flux::DensityStatement &node);
   void eval(Flux::ForceStatement &node);
   void eval(Flux::SolidStatement &node);
+  void eval(Flux::FlowStatement &node);
 };

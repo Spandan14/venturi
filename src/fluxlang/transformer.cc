@@ -57,6 +57,8 @@ FluxASTTransformer::_transform_statement(peg::Ast &node) {
     return _transform_force_statement(*stmt_node);
   } else if (stmt_node->name == "SolidStmt") {
     return _transform_solid_statement(*stmt_node);
+  } else if (stmt_node->name == "FlowStmt") {
+    return _transform_flow_statement(*stmt_node);
   } else {
     throw std::runtime_error("Unknown Statement type: " + stmt_node->name);
   }
@@ -299,6 +301,38 @@ FluxASTTransformer::_transform_solid_statement(peg::Ast &node) {
     throw std::runtime_error("Expression not found in SolidStmt!");
   }
   return std::make_unique<Flux::SolidStatement>(
+      target_type, std::move(identifier), std::move(value));
+}
+
+std::unique_ptr<Flux::FlowStatement>
+FluxASTTransformer::_transform_flow_statement(peg::Ast &node) {
+  // FlowStmt      <- 'flow' _ TargetType _ Identifier _ '=' _ Expression
+  Flux::TargetType target_type = Flux::TargetType::All;
+  std::string identifier;
+  std::unique_ptr<Flux::Expression> value;
+
+  for (auto &child : node.nodes) {
+    if (_is_spacer(*child)) {
+      continue;
+    }
+
+    if (child->name == "Target") {
+      identifier = _extract_target(*child);
+      if (identifier != "all") {
+        target_type = Flux::TargetType::Identifier;
+      }
+    } else if (child->name == "Expr") {
+      value = _transform_expression(*child);
+    }
+  }
+
+  if (identifier.empty()) {
+    throw std::runtime_error("Identifier not found in FlowStmt!");
+  }
+  if (!value) {
+    throw std::runtime_error("Expression not found in FlowStmt!");
+  }
+  return std::make_unique<Flux::FlowStatement>(
       target_type, std::move(identifier), std::move(value));
 }
 
@@ -645,6 +679,8 @@ Flux::GenVar FluxASTTransformer::_extract_gen_var(peg::Ast &node) {
     return Flux::GenVar::J;
   } else if (token == "k") {
     return Flux::GenVar::K;
+  } else if (token == "t") {
+    return Flux::GenVar::T;
   } else {
     throw std::runtime_error("Unknown GenVar token: " + token);
   }

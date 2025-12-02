@@ -24,6 +24,8 @@ public:
   void initialize_forces(const ForceInitializer &initializer) override;
   void initialize_solids(const SolidInitializer &initializer) override;
 
+  void initialize_flows(const FlowGenerator &generator) override;
+
 private:
   MAC2D mac;
   MAC2D mac_next;
@@ -50,4 +52,7 @@ private:
   _build_pressure_matrix(const std::vector<int> &fluid_idx, int fluid_count);
 
   void _advect_cell_data(float dt);
+
+  FlowGenerator flow_generator;
+  void _apply_flows();
 };
