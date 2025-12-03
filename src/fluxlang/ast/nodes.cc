@@ -178,3 +178,7 @@ std::string Flux::SolidStatement::to_string() {
 std::string Flux::FlowStatement::to_string() {
   return "flow " + identifier + " = " + value->to_string() + ";";
 }
+
+std::string Flux::FlowRatioStatement::to_string() {
+  return "flow_ratio " + identifier + " = " + value->to_string() + ";";
+}

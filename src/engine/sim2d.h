@@ -25,6 +25,7 @@ public:
   void initialize_solids(const SolidInitializer &initializer) override;
 
   void initialize_flows(const FlowGenerator &generator) override;
+  void initialize_flow_ratios(const FlowRatioGenerator &generator) override;
 
 private:
   MAC2D mac;
@@ -55,4 +56,7 @@ private:
 
   FlowGenerator flow_generator;
   void _apply_flows();
+
+  FlowRatioGenerator flow_ratio_generator;
+  void _apply_flow_ratios();
 };

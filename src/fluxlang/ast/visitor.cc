@@ -20,4 +20,5 @@ void DensityStatement::accept(Visitor &visitor) { visitor.visit(*this); }
 void ForceStatement::accept(Visitor &visitor) { visitor.visit(*this); }
 void SolidStatement::accept(Visitor &visitor) { visitor.visit(*this); }
 void FlowStatement::accept(Visitor &visitor) { visitor.visit(*this); }
+void FlowRatioStatement::accept(Visitor &visitor) { visitor.visit(*this); }
 } // namespace Flux

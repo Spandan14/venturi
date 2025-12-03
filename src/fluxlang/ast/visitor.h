@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fluxlang/ast/nodes.h"
 namespace Flux {
 class Script;
 
@@ -19,6 +20,7 @@ class DensityStatement;
 class ForceStatement;
 class SolidStatement;
 class FlowStatement;
+class FlowRatioStatement;
 
 class Visitor {
 public:
@@ -42,5 +44,6 @@ public:
   virtual void visit(ForceStatement &node) = 0;
   virtual void visit(SolidStatement &node) = 0;
   virtual void visit(FlowStatement &node) = 0;
+  virtual void visit(FlowRatioStatement &node) = 0;
 };
 } // namespace Flux

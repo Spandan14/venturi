@@ -28,6 +28,7 @@ void Simulation2D::step(float dt) {
   mac_next.current_time += dt;
 
   _apply_flows();
+  _apply_flow_ratios();
 
   // total_density = 0.0f;
   // for (float d : mac_next.densities) {
@@ -105,6 +106,10 @@ void Simulation2D::initialize_flows(const FlowGenerator &generator) {
   flow_generator = generator;
 }
 
+void Simulation2D::initialize_flow_ratios(const FlowRatioGenerator &generator) {
+  flow_ratio_generator = generator;
+}
+
 void Simulation2D::_apply_forces(float dt) {
   for (int j = 0; j < ny; ++j) {
     for (int i = 0; i < nx + 1; ++i) { // u-grid
@@ -142,6 +147,17 @@ void Simulation2D::_apply_flows() {
     for (int i = 0; i < nx; ++i) {
       float added_density = flow_generator(i, j, mac_next.current_time);
       mac_next.densities[mac_next.idx(i, j)] += added_density;
+      mac_next.densities[mac_next.idx(i, j)] =
+          std::max(0.0f, mac_next.densities[mac_next.idx(i, j)]);
+    }
+  }
+}
+
+void Simulation2D::_apply_flow_ratios() {
+  for (int j = 0; j < ny; ++j) {
+    for (int i = 0; i < nx; ++i) {
+      float ratio = flow_ratio_generator(i, j, mac_next.current_time);
+      mac_next.densities[mac_next.idx(i, j)] *= ratio;
       mac_next.densities[mac_next.idx(i, j)] =
           std::max(0.0f, mac_next.densities[mac_next.idx(i, j)]);
     }

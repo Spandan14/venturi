@@ -35,6 +35,7 @@ struct RuntimeConfig {
       force_values;
   std::unordered_map<std::string, Value> solid_values;
   std::unordered_map<std::string, Value> flow_values;
+  std::unordered_map<std::string, Value> flow_ratio_values;
 };
 
 class Runtime {
@@ -80,4 +81,5 @@ private:
   void eval(Flux::ForceStatement &node);
   void eval(Flux::SolidStatement &node);
   void eval(Flux::FlowStatement &node);
+  void eval(Flux::FlowRatioStatement &node);
 };

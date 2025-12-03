@@ -22,6 +22,9 @@ public:
   using FlowGenerator =
       std::conditional_t<DIM == 2, std::function<float(int, int, float)>,
                          std::function<float(int, int, int, float)>>;
+  using FlowRatioGenerator =
+      std::conditional_t<DIM == 2, std::function<float(int, int, float)>,
+                         std::function<float(int, int, int, float)>>;
 
   Simulation() = default;
   virtual ~Simulation() = default;
@@ -33,4 +36,5 @@ public:
   virtual void initialize_solids(const SolidInitializer &initializer) = 0;
 
   virtual void initialize_flows(const FlowGenerator &generator) = 0;
+  virtual void initialize_flow_ratios(const FlowRatioGenerator &generator) = 0;
 };

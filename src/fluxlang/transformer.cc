@@ -59,6 +59,8 @@ FluxASTTransformer::_transform_statement(peg::Ast &node) {
     return _transform_solid_statement(*stmt_node);
   } else if (stmt_node->name == "FlowStmt") {
     return _transform_flow_statement(*stmt_node);
+  } else if (stmt_node->name == "FlowRatioStmt") {
+    return _transform_flow_ratio_statement(*stmt_node);
   } else {
     throw std::runtime_error("Unknown Statement type: " + stmt_node->name);
   }
@@ -333,6 +335,40 @@ FluxASTTransformer::_transform_flow_statement(peg::Ast &node) {
     throw std::runtime_error("Expression not found in FlowStmt!");
   }
   return std::make_unique<Flux::FlowStatement>(
+      target_type, std::move(identifier), std::move(value));
+}
+
+std::unique_ptr<Flux::FlowRatioStatement>
+FluxASTTransformer::_transform_flow_ratio_statement(peg::Ast &node) {
+  // FlowRatioStmt <- 'flow_ratio' _ TargetType _ Identifier _ '=' _ Expression
+  Flux::TargetType target_type = Flux::TargetType::All;
+  std::string identifier;
+  std::unique_ptr<Flux::Expression> value;
+
+  for (auto &child : node.nodes) {
+    if (_is_spacer(*child)) {
+      continue;
+    }
+
+    if (child->name == "Target") {
+      identifier = _extract_target(*child);
+      if (identifier != "all") {
+        target_type = Flux::TargetType::Identifier;
+      }
+    } else if (child->name == "Expr") {
+      value = _transform_expression(*child);
+    }
+  }
+
+  if (identifier.empty()) {
+    throw std::runtime_error("Identifier not found in FlowRatioStmt!");
+  }
+
+  if (!value) {
+    throw std::runtime_error("Expression not found in FlowRatioStmt!");
+  }
+
+  return std::make_unique<Flux::FlowRatioStatement>(
       target_type, std::move(identifier), std::move(value));
 }
 

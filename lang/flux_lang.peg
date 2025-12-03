@@ -8,6 +8,7 @@ Statement      <- DimStmt
                 / ForceStmt
                 / SolidStmt
                 / FlowStmt
+                / FlowRatioStmt
 
 DimStmt        <- 'dim' _ DimType
 DimType        <- '2D' / '3D'
@@ -22,6 +23,7 @@ DensityStmt    <- 'density' _ Target _ '=' _ Expr
 ForceStmt      <- 'force'   _ Target _ '=' _ VectorExpr 
 SolidStmt      <- 'solid'   _ Target _ '=' _ Expr 
 FlowStmt       <- 'flow'    _ Target _ '=' _ Expr
+FlowRatioStmt  <- 'flow_ratio' _ Target _ '=' _ Expr
 
 Target         <- 'all' / Identifier
 
@@ -53,4 +55,6 @@ Identifier     <- < [a-zA-Z_][a-zA-Z0-9_]* >
 AddOp          <- < '+' / '-' >
 MulOp          <- < '*' / '/' / '^' >
 
-_              <- [ \t\r\n]*
+_              <- (Space / Comment)*
+Space          <- [ \t\r\n]
+Comment        <- '//' (![\r\n] .)*

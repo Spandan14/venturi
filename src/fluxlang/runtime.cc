@@ -77,7 +77,7 @@ void Runtime::_prepare_2d() {
             extract_float_2d(_config.density_values[set_name],
                              static_cast<float>(i), static_cast<float>(j), t);
 
-        total_density += density;
+        total_density = density;
       }
     }
 
@@ -103,7 +103,7 @@ void Runtime::_prepare_2d() {
         float fy = extract_float_2d((*force_values)[1], static_cast<float>(i),
                                     static_cast<float>(j), t);
 
-        total_force += vec2d(fx, fy);
+        total_force = vec2d(fx, fy);
       }
     }
 
@@ -140,11 +140,28 @@ void Runtime::_prepare_2d() {
         float fx = extract_float_2d(flow_value, static_cast<float>(i),
                                     static_cast<float>(j), t);
 
-        total_flow += fx;
+        total_flow = fx;
       }
     }
 
     return total_flow;
+  };
+
+  auto flow_ratio_generator = [this, sets_lambda](int i, int j, float t) {
+    float total_flow_ratio = 1.0f;
+
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, t);
+    for (const auto &set_name : sets_to_check) {
+      if (_config.flow_ratio_values.count(set_name) > 0) {
+        auto &flow_ratio_value = _config.flow_ratio_values[set_name];
+        float fx = extract_float_2d(flow_ratio_value, static_cast<float>(i),
+                                    static_cast<float>(j), t);
+
+        total_flow_ratio = fx;
+      }
+    }
+
+    return total_flow_ratio;
   };
 
   auto &sim = std::get<std::unique_ptr<Simulation<2>>>(_config.simulation);
@@ -152,6 +169,7 @@ void Runtime::_prepare_2d() {
   sim->initialize_forces(force_initializer);
   sim->initialize_solids(solid_initializer);
   sim->initialize_flows(flow_generator);
+  sim->initialize_flow_ratios(flow_ratio_generator);
 }
 
 void Runtime::_prepare_3d() {
@@ -180,7 +198,7 @@ void Runtime::_prepare_3d() {
             _config.density_values[set_name], static_cast<float>(i),
             static_cast<float>(j), static_cast<float>(k), t);
 
-        total_density += density;
+        total_density = density;
       }
     }
 
@@ -211,7 +229,7 @@ void Runtime::_prepare_3d() {
             extract_float_3d((*force_values)[2], static_cast<float>(i),
                              static_cast<float>(j), static_cast<float>(k), t);
 
-        total_force += vec3d(fx, fy, fz);
+        total_force = vec3d(fx, fy, fz);
       }
     }
 
@@ -250,11 +268,30 @@ void Runtime::_prepare_3d() {
             extract_float_3d(flow_value, static_cast<float>(i),
                              static_cast<float>(j), static_cast<float>(k), t);
 
-        total_flow += fx;
+        total_flow = fx;
       }
     }
 
     return total_flow;
+  };
+
+  auto flow_ratio_generator = [this, sets_lambda](int i, int j, int k,
+                                                  float t) {
+    float total_flow_ratio = 1.0f;
+
+    std::vector<std::string> sets_to_check = sets_lambda(i, j, k, t);
+    for (const auto &set_name : sets_to_check) {
+      if (_config.flow_ratio_values.count(set_name) > 0) {
+        auto &flow_ratio_value = _config.flow_ratio_values[set_name];
+        float fx =
+            extract_float_3d(flow_ratio_value, static_cast<float>(i),
+                             static_cast<float>(j), static_cast<float>(k), t);
+
+        total_flow_ratio = fx;
+      }
+    }
+
+    return total_flow_ratio;
   };
 
   auto &sim = std::get<std::unique_ptr<Simulation<3>>>(_config.simulation);
@@ -262,6 +299,7 @@ void Runtime::_prepare_3d() {
   sim->initialize_forces(force_initializer);
   sim->initialize_solids(solid_initializer);
   sim->initialize_flows(flow_generator);
+  sim->initialize_flow_ratios(flow_ratio_generator);
 }
 
 void Runtime::_step(float dt) {
@@ -717,6 +755,11 @@ void Runtime::eval(Flux::Statement &node) {
     return;
   }
 
+  if (auto flow_ratio_stmt = dynamic_cast<Flux::FlowRatioStatement *>(&node)) {
+    eval(*flow_ratio_stmt);
+    return;
+  }
+
   throw std::runtime_error("Unknown statement type in eval!");
 }
 
@@ -807,3 +850,8 @@ void Runtime::eval(Flux::FlowStatement &node) {
   auto membership = std::get<Value>(eval(*node.value));
   _config.flow_values[node.identifier] = std::move(membership);
 };
+
+void Runtime::eval(Flux::FlowRatioStatement &node) {
+  auto membership = std::get<Value>(eval(*node.value));
+  _config.flow_ratio_values[node.identifier] = std::move(membership);
+}

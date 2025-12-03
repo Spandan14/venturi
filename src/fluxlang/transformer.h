@@ -30,6 +30,8 @@ private:
   _transform_solid_statement(peg::Ast &node);
   std::unique_ptr<Flux::FlowStatement>
   _transform_flow_statement(peg::Ast &node);
+  std::unique_ptr<Flux::FlowRatioStatement>
+  _transform_flow_ratio_statement(peg::Ast &node);
 
   std::unique_ptr<Flux::Expression> _transform_expression(peg::Ast &node);
 
