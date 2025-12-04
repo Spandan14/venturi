@@ -591,7 +591,7 @@ std::unique_ptr<Flux::GenFuncCallExpression>
 FluxASTTransformer::_transform_gen_func_call_expression(peg::Ast &node) {
   // FuncCall      <- GenFunc _ '(' _ Expr _ ')'
   Flux::GenFunc func;
-  std::unique_ptr<Flux::Expression> argument;
+  std::vector<std::unique_ptr<Flux::Expression>> arguments;
 
   for (auto &child : node.nodes) {
     if (_is_spacer(*child)) {
@@ -601,16 +601,13 @@ FluxASTTransformer::_transform_gen_func_call_expression(peg::Ast &node) {
     if (child->name == "Identifier") {
       func = _extract_gen_func(*child);
     } else if (child->name == "Expr") {
-      argument = _transform_expression(*child);
+      auto arg = _transform_expression(*child);
+      arguments.push_back(std::move(arg));
     }
   }
 
-  if (!argument) {
-    throw std::runtime_error("Argument expression not found in FuncCall!");
-  }
-
   return std::make_unique<Flux::GenFuncCallExpression>(func,
-                                                       std::move(argument));
+                                                       std::move(arguments));
 }
 
 std::unique_ptr<Flux::LiteralExpression>
@@ -742,6 +739,10 @@ Flux::GenFunc FluxASTTransformer::_extract_gen_func(peg::Ast &node) {
     return Flux::GenFunc::Log;
   } else if (token == "exp") {
     return Flux::GenFunc::Exp;
+  } else if (token == "min") {
+    return Flux::GenFunc::Min;
+  } else if (token == "max") {
+    return Flux::GenFunc::Max;
   } else {
     throw std::runtime_error("Unknown GenFunc token: " + token);
   }

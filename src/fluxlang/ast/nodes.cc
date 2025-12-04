@@ -87,6 +87,10 @@ std::string Flux::gen_func_to_string(GenFunc gf) {
     return "log";
   case GenFunc::Exp:
     return "exp";
+  case GenFunc::Min:
+    return "min";
+  case GenFunc::Max:
+    return "max";
   }
 }
 
@@ -126,7 +130,15 @@ std::string Flux::BinaryExpression::to_string() {
 }
 
 std::string Flux::GenFuncCallExpression::to_string() {
-  return gen_func_to_string(func) + "(" + argument->to_string() + ")";
+  std::string result = gen_func_to_string(func) + "(";
+  for (size_t i = 0; i < arguments.size(); ++i) {
+    result += arguments[i]->to_string();
+    if (i < arguments.size() - 1) {
+      result += ", ";
+    }
+  }
+  result += ")";
+  return result;
 }
 
 // STATEMENTS

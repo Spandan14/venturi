@@ -1,0 +1,21 @@
+dim 2D
+
+grid 220 x 100 with dx = 1
+window 1760 x 800
+
+// set circle = cells where (i - 150)^2 + (j - 50)^2 < 15^2
+set airfoil = cells where (abs(i - 130) / 60)^1.5 + (abs(j - 50) / 5)^1.2 <= 1
+
+
+set init_density = cells where (20 <= i <= 40) and (40 <= j <= 60)
+set sink = cells where i > 200
+
+solid airfoil = true
+
+density all = 0.15
+density init_density = 1.0
+
+flow init_density = min(3.0, 0.10 * t)
+flow_ratio sink = max(1 - 0.01 * t, 0.5)
+
+force all = (100, 0)

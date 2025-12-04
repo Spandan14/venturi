@@ -648,7 +648,10 @@ Value Runtime::eval(Flux::BinaryExpression &node) {
 }
 
 Value Runtime::eval(Flux::GenFuncCallExpression &node) {
-  auto argument = eval(*node.argument);
+  std::vector<UnifiedValue> evaled_args;
+  for (auto &arg_expr : node.arguments) {
+    evaled_args.push_back(eval(*arg_expr));
+  }
 
   if (!_config.dim.has_value()) {
     throw std::runtime_error(
@@ -656,25 +659,69 @@ Value Runtime::eval(Flux::GenFuncCallExpression &node) {
   }
 
   if (_config.dim == Flux::DimType::Two) {
-    auto lambda = [argument = std::move(argument),
+    auto lambda = [arguments = std::move(evaled_args),
                    func = node.func](float i, float j, float t) {
-      float arg_value = extract_float_2d(argument, i, j, t);
+      std::vector<float> arg_values;
+      for (const auto &arg : arguments) {
+        float val = extract_float_2d(arg, i, j, t);
+        arg_values.push_back(val);
+      }
 
       switch (func) {
       case Flux::GenFunc::Sin:
-        return std::sin(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Sin function requires exactly one argument!");
+        }
+        return std::sin(arg_values[0]);
       case Flux::GenFunc::Cos:
-        return std::cos(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Cos function requires exactly one argument!");
+        }
+        return std::cos(arg_values[0]);
       case Flux::GenFunc::Tan:
-        return std::tan(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Tan function requires exactly one argument!");
+        }
+        return std::tan(arg_values[0]);
       case Flux::GenFunc::Abs:
-        return std::abs(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Abs function requires exactly one argument!");
+        }
+        return std::abs(arg_values[0]);
       case Flux::GenFunc::Sqrt:
-        return std::sqrt(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Sqrt function requires exactly one argument!");
+        }
+        return std::sqrt(arg_values[0]);
       case Flux::GenFunc::Log:
-        return std::log(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Log function requires exactly one argument!");
+        }
+        return std::log(arg_values[0]);
       case Flux::GenFunc::Exp:
-        return std::exp(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Exp function requires exactly one argument!");
+        }
+        return std::exp(arg_values[0]);
+      case Flux::GenFunc::Min:
+        if (arg_values.size() < 1) {
+          throw std::runtime_error(
+              "Min function requires at least one argument!");
+        }
+        return *std::min_element(arg_values.begin(), arg_values.end());
+      case Flux::GenFunc::Max:
+        if (arg_values.size() < 1) {
+          throw std::runtime_error(
+              "Max function requires at least one argument!");
+        }
+        return *std::max_element(arg_values.begin(), arg_values.end());
       default:
         throw std::runtime_error(
             "Unsupported GenFunc in 2D GenFuncCallExpression!");
@@ -684,30 +731,75 @@ Value Runtime::eval(Flux::GenFuncCallExpression &node) {
   }
 
   if (_config.dim == Flux::DimType::Three) {
-    auto lambda = [argument = std::move(argument),
+    auto lambda = [arguments = std::move(evaled_args),
                    func = node.func](float i, float j, float k, float t) {
-      float arg_value = extract_float_3d(argument, i, j, k, t);
+      std::vector<float> arg_values;
+      for (const auto &arg : arguments) {
+        float val = extract_float_3d(arg, i, j, k, t);
+        arg_values.push_back(val);
+      }
 
       switch (func) {
       case Flux::GenFunc::Sin:
-        return std::sin(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Sin function requires exactly one argument!");
+        }
+        return std::sin(arg_values[0]);
       case Flux::GenFunc::Cos:
-        return std::cos(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Cos function requires exactly one argument!");
+        }
+        return std::cos(arg_values[0]);
       case Flux::GenFunc::Tan:
-        return std::tan(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Tan function requires exactly one argument!");
+        }
+        return std::tan(arg_values[0]);
       case Flux::GenFunc::Abs:
-        return std::abs(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Abs function requires exactly one argument!");
+        }
+        return std::abs(arg_values[0]);
       case Flux::GenFunc::Sqrt:
-        return std::sqrt(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Sqrt function requires exactly one argument!");
+        }
+        return std::sqrt(arg_values[0]);
       case Flux::GenFunc::Log:
-        return std::log(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Log function requires exactly one argument!");
+        }
+        return std::log(arg_values[0]);
       case Flux::GenFunc::Exp:
-        return std::exp(arg_value);
+        if (arg_values.size() != 1) {
+          throw std::runtime_error(
+              "Exp function requires exactly one argument!");
+        }
+        return std::exp(arg_values[0]);
+      case Flux::GenFunc::Min:
+        if (arg_values.size() < 1) {
+          throw std::runtime_error(
+              "Min function requires at least one argument!");
+        }
+        return *std::min_element(arg_values.begin(), arg_values.end());
+      case Flux::GenFunc::Max:
+        if (arg_values.size() < 1) {
+          throw std::runtime_error(
+              "Max function requires at least one argument!");
+        }
+        return *std::max_element(arg_values.begin(), arg_values.end());
       default:
         throw std::runtime_error(
-            "Unsupported GenFunc in 3D GenFuncCallExpression!");
+            "Unsupported GenFunc in 2D GenFuncCallExpression!");
       }
     };
+
     return Value3D(std::move(lambda));
   }
 

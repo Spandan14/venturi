@@ -12,7 +12,7 @@ int main() {
   Parser parser;
 
   // Simulation2D sim = Simulation2D(220, 100, 1, 1);
-  auto ast = parser.parse("../../../sims/simple_1.flx");
+  auto ast = parser.parse("../../../sims/circle.flx");
 
   FluxASTTransformer transformer(*ast);
   auto script = transformer.transform();

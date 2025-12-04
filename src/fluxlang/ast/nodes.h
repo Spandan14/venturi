@@ -56,7 +56,7 @@ enum class BinaryOp {
 
 enum class GenVar { I, J, K, T };
 
-enum class GenFunc { Sin, Cos, Tan, Abs, Sqrt, Log, Exp };
+enum class GenFunc { Sin, Cos, Tan, Abs, Sqrt, Log, Exp, Min, Max };
 
 std::string dim_type_to_string(DimType dt);
 std::string target_type_to_string(TargetType tt);
@@ -126,9 +126,9 @@ public:
 class GenFuncCallExpression : public Expression {
 public:
   GenFunc func;
-  std::unique_ptr<Expression> argument;
-  GenFuncCallExpression(GenFunc f, std::unique_ptr<Expression> arg)
-      : func(f), argument(std::move(arg)) {}
+  std::vector<std::unique_ptr<Expression>> arguments;
+  GenFuncCallExpression(GenFunc f, std::vector<std::unique_ptr<Expression>> arg)
+      : func(f), arguments(std::move(arg)) {}
   void accept(Visitor &visitor) override;
   std::string to_string() override;
 };
