@@ -1,24 +1,19 @@
 #pragma once
 
 #include "engine/sim.h"
-#include "mac/mac2d.h"
+#include "mac/mac3d.h"
 #include "solver/ivp.h"
 #include "solver/pressure_solvers.h"
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-class Simulation2D : public Simulation<2> {
+class Simulation3D : public Simulation<3> {
 public:
-  Simulation2D(int nx, int ny, float dx, float dy);
-  ~Simulation2D() = default;
+  Simulation3D(int nx, int ny, int nz, float dx, float dy, float dz);
+  ~Simulation3D() = default;
 
   void step(float dt) override;
-  [[nodiscard]] const MAC2D &get_mac() const { return mac; }
-
-  [[deprecated]] void
-  initialize_vel_u(const std::function<float(int, int)> &initializer);
-  [[deprecated]] void
-  initialize_vel_v(const std::function<float(int, int)> &initializer);
+  [[nodiscard]] const MAC3D &get_mac() const { return mac; }
 
   void initialize_density(const DensityInitializer &initializer) override;
   void initialize_forces(const ForceInitializer &initializer) override;
@@ -28,11 +23,11 @@ public:
   void initialize_flow_ratios(const FlowRatioGenerator &generator) override;
 
 private:
-  MAC2D mac;
-  MAC2D mac_next;
+  MAC3D mac;
+  MAC3D mac_next;
 
-  int nx, ny;
-  float dx, dy;
+  int nx, ny, nz;
+  float dx, dy, dz;
 
   IVPSolverType ivp_solver = IVPSolverType::RK4;
   PressureSolverType pressure_solver = PressureSolverType::ICCG;
@@ -43,6 +38,7 @@ private:
   void _advect_velocities(float dt);
   void _advect_u(float dt);
   void _advect_v(float dt);
+  void _advect_w(float dt);
 
   void _pressure_solve(float dt);
   void _project_velocities(const Eigen::VectorXd &pressure,

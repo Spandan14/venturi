@@ -237,8 +237,8 @@ void Simulation2D::_pressure_solve(float dt) {
   switch (pressure_solver) {
 
   case PressureSolverType::ICCG: {
-    ICCGSolver pcg_solver = ICCGSolver(1000, 1e-6f);
-    pressure = pcg_solver.solve(divergence, A);
+    ICCGSolver iccg_solver = ICCGSolver(1000, 1e-6f);
+    pressure = iccg_solver.solve(divergence, A);
     break;
   }
   default:
@@ -488,7 +488,8 @@ void Simulation2D::_advect_cell_data(float dt) {
         // std::cout << "Warning: Density advected into solid at cell (" << i
         //           << ", " << j << ")\n";
         //           << std::endl;
-        x_orig = mac.nonsolid_projection(x_orig, x_dest, 10);
+        x_orig = mac.nonsolid_projection(x_orig, x_dest,
+                                         nonsolid_projection_iterations);
         // std::cout << "assigned density: " << mac.density(x_orig) <<
         // std::endl;
       }
