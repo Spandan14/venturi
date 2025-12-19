@@ -88,7 +88,7 @@ void Renderer2D::_draw_sim() {
 
       vec3d color = 0.5f * d * (u_color + v_color);
       // color = d * v_color;
-      // color = {d, d, d};
+      color = {d, d, d};
 
       _draw_quad(x0, y0, x1, y1, color[0], color[1], color[2]);
 
@@ -99,7 +99,7 @@ void Renderer2D::_draw_sim() {
                    color[0], color[1], color[2]);
         // 0.2f, 0.2f, 0.2f);
         _draw_outline(i * mac.dx, j * mac.dy, (i + 1) * mac.dx,
-                      (j + 1) * mac.dy, 0.2f, 0.2f, 0.2f);
+                      (j + 1) * mac.dy, 0.8f, 0.8f, 0.8f);
         continue;
       }
       // _draw_outline(x0, y0, x1, y1, 0.0f, 0.0f, 0.0f);

@@ -1,6 +1,5 @@
 #include "sim3d.h"
 #include "solver/iccg.h"
-#include <iostream>
 #include <utils/physical_consts.h>
 
 Simulation3D::Simulation3D(int nx, int ny, int nz, float dx, float dy, float dz)

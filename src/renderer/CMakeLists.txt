@@ -1,5 +1,7 @@
 add_library(renderer 
-    renderer_2d.cc)
+    renderer_2d.cc
+    3d/renderer_3d.cc
+)
 
 target_include_directories(renderer 
     PUBLIC
@@ -7,6 +9,8 @@ target_include_directories(renderer
     PRIVATE
         /opt/homebrew/include
 )
+
+target_compile_definitions(renderer PRIVATE SHADERS_3D="${CMAKE_CURRENT_SOURCE_DIR}/3d/shaders/")
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(OpenGL REQUIRED)

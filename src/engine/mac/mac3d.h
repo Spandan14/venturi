@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Core>
+#include <engine/mac/mac.h>
 #include <vector>
 
 typedef Eigen::Vector3d vec3d;
@@ -16,8 +17,6 @@ struct Cell3D {
   int w_lo_idx;
   int w_hi_idx;
 };
-
-enum class CellType { FLUID, SOLID, AIR };
 
 class MAC3D {
 public:

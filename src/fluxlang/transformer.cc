@@ -162,8 +162,8 @@ FluxASTTransformer::_transform_window_statement(peg::Ast &node) {
     }
   }
 
-  if (sizes.size() != 2 && sizes.size() != 3) {
-    throw std::runtime_error("WindowStmt must have 2 or 3 sizes!");
+  if (sizes.size() != 2) {
+    throw std::runtime_error("WindowStmt must have 2 sizes!");
   }
 
   std::vector<std::unique_ptr<Flux::Expression>> size_exprs;

@@ -1,4 +1,6 @@
+#include "engine/sim3d.h"
 #include "fluxlang/ast/nodes.h"
+#include "renderer/3d/renderer_3d.h"
 #include <fluxlang/runtime.h>
 #include <iostream>
 
@@ -885,7 +887,21 @@ void Runtime::eval(Flux::GridStatement &node) {
   }
 
   if (_config.dim == Flux::DimType::Three) {
-    throw std::runtime_error("3D simulations are not yet supported!");
+    if (node.sizes.size() != 3) {
+      throw std::runtime_error(
+          "GridStatement size mismatch for 3D simulation!");
+    }
+
+    int nx = static_cast<int>(
+        dynamic_cast<Flux::LiteralExpression *>(node.sizes[0].get())->value);
+    int ny = static_cast<int>(
+        dynamic_cast<Flux::LiteralExpression *>(node.sizes[1].get())->value);
+    int nz = static_cast<int>(
+        dynamic_cast<Flux::LiteralExpression *>(node.sizes[2].get())->value);
+
+    _config.simulation = std::make_unique<Simulation3D>(
+        nx, ny, nz, static_cast<float>(node.dx), static_cast<float>(node.dx),
+        static_cast<float>(node.dx));
   }
 };
 
@@ -913,7 +929,20 @@ void Runtime::eval(Flux::WindowStatement &node) {
   }
 
   if (_config.dim == Flux::DimType::Three) {
-    throw std::runtime_error("3D simulations are not yet supported!");
+    if (node.sizes.size() != 2) {
+      throw std::runtime_error(
+          "WindowStatement size mismatch for 3D simulation!");
+    }
+
+    float width =
+        std::get<Value3D>(std::get<Value>(eval(*node.sizes[0])))(0, 0, 0, 0);
+    float height =
+        std::get<Value3D>(std::get<Value>(eval(*node.sizes[1])))(0, 0, 0, 0);
+
+    auto &sim = std::get<std::unique_ptr<Simulation<3>>>(_config.simulation);
+
+    _config.renderer = std::make_unique<Renderer3D>(
+        dynamic_cast<Simulation3D &>(*sim).get_mac(), width, height);
   }
 };
 

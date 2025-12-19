@@ -1,5 +1,6 @@
 add_library(engine
     sim2d.cc
+    sim3d.cc
     mac/mac2d.cc
     mac/mac3d.cc
 )
