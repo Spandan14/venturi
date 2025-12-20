@@ -24,7 +24,13 @@ void Runtime::run() {
     auto step_ms =
         std::chrono::duration<float>(this_frame - last_frame).count();
 
-    _step(step_ms);
+    // std::cout << "Step ms: " << step_ms * 1000.0f << " ms" << std::endl;
+    //
+    // FPS cap
+    if (step_ms > 0.01f) {
+      _step(step_ms);
+    }
+
     last_frame = this_frame;
 
     _config.renderer->render();
@@ -34,12 +40,7 @@ void Runtime::run() {
 
 void Runtime::_prepare_gen() {
   // move 'all' to be at the start of the set, so that it is evaluated first
-  // auto it =
-  //     std::find(_config.set_order.begin(), _config.set_order.end(), "all");
-  // if (it != _config.set_order.end()) {
-  //   _config.set_order.erase(it);
   _config.set_order.insert(_config.set_order.begin(), "all");
-  // }
 
   // make membership for all as well
   if (_config.dim == Flux::DimType::Two) {
@@ -175,7 +176,6 @@ void Runtime::_prepare_2d() {
 }
 
 void Runtime::_prepare_3d() {
-
   auto sets_lambda = [this](int i, int j, int k, float t) {
     std::vector<std::string> sets;
     for (const auto &set_name : _config.set_order) {

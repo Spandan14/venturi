@@ -1,4 +1,5 @@
 #include "iccg.h"
+#include <iostream>
 
 ICCGSolver::ICCGSolver(int max_iterations, float tolerance)
     : max_iterations(max_iterations), tolerance(tolerance) {}
@@ -17,6 +18,11 @@ Eigen::VectorXd ICCGSolver::solve(const Eigen::VectorXd &divergence,
 
   if (solver.info() != Eigen::Success) {
     throw std::runtime_error("[SOLVER] Decomposition failed in PCG solver.");
+  }
+
+  if (solver.error() > tolerance) {
+    std::cout << "[SOLVER] Warning: Initial residual error " << solver.error()
+              << " exceeds tolerance " << tolerance << std::endl;
   }
 
   return solver.solve(divergence);

@@ -83,4 +83,26 @@ public:
 
     return inv_proj;
   }
+
+  void rotate_deg(float angle_deg, const vec3f &axis) {
+    float angle_rad = angle_deg * M_PI / 180.0;
+    quatf q_rot(Eigen::AngleAxisf(angle_rad, axis.normalized()));
+    orientation = q_rot * orientation;
+  }
+
+  void translate(const vec3f &delta) { position += delta; }
+
+  void look_at(const vec3f &target,
+               const vec3f &up_dir = vec3f(0.0, 1.0, 0.0)) {
+    vec3f dir = (target - position).normalized();
+    vec3f right = dir.cross(up_dir).normalized();
+    vec3f up = right.cross(dir).normalized();
+
+    mat3f rot_matrix;
+    rot_matrix.col(0) = right;
+    rot_matrix.col(1) = up;
+    rot_matrix.col(2) = -dir;
+
+    orientation = quatf(rot_matrix);
+  }
 };

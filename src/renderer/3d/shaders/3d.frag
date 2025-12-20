@@ -11,6 +11,7 @@ uniform mat4 inv_proj;
 
 uniform vec3 volume_min;
 uniform vec3 volume_max;
+uniform ivec3 grid_size;
 
 uniform float step_size;
 uniform float absorption;
@@ -69,16 +70,46 @@ void main() {
         }
 
         vec3 pos = ray_orig + t * ray_dir;
+
+        vec3 grid_pos = (pos - volume_min) / (volume_max - volume_min) * vec3(grid_size);
+        vec3 frac = fract(grid_pos);
+        vec3 dist_to_face = min(frac, 1.0 - frac);
+        float border_width = 0.01;
+        vec3 border_color = vec3(0.0, 0.0, 0.0);
+
+        // if (pos.x < 0.5 || pos.x > grid_size.x - 0.5 ||
+        //         pos.y < 0.5 || pos.y > grid_size.y - 0.5 ||
+        //         pos.z < 0.5 || pos.z > grid_size.z - 0.5) {
+        //     border_width = 0.10;
+        //     border_color = vec3(1.0, 0.0, 0.0);
+        // }
+        //
+        float border = step(dist_to_face.x, border_width) + step(dist_to_face.y, border_width) + step(dist_to_face.z, border_width);
+
+        border = clamp(border, 0.0, 1.0);
+
         float density = sample_density(pos);
 
+        // guard
+        if (density < 1e-3) {
+            t += step_size;
+            continue;
+        }
+
         float a = 1.0 - exp(-density * absorption);
-        vec3 c = vec3(density);
+        vec3 c = mix(vec3(density), border_color, border);
+        c = vec3(density);
 
         color += (1.0 - alpha) * a * c;
         alpha += (1.0 - alpha) * a;
 
         t += step_size;
+
+        // color = grid_pos;
+        // alpha = 1.0;
     }
 
     frag_color = vec4(color, alpha);
+    // frag_color = vec4(t, t_entry, t_entry, 1.0);
+    // frag_color = vec4(ray_dir.x, ray_dir.y, ray_dir.z, 1.0);
 }

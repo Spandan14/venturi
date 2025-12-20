@@ -25,7 +25,7 @@ private:
   GLuint vao, vbo;
   GLuint density_texture;
 
-  float _rm_step_size = 0.1f;
+  float _rm_step_size = 0.3f;
   float _rm_absorption = 1.0f;
   int _rm_max_steps = 256;
 

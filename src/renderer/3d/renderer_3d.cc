@@ -90,6 +90,11 @@ void Renderer3D::_init_data() {
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
 
   glGenTextures(1, &density_texture);
+
+  camera.position =
+      vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
+            -5 * std::max({mac.nx * mac.dx, mac.ny * mac.dy, mac.nz * mac.dz}));
+  camera.rotate_deg(180.f, vec3f(0.0f, 1.0f, 0.0f));
 }
 
 void Renderer3D::_load_uniforms() {
@@ -103,6 +108,8 @@ void Renderer3D::_load_uniforms() {
   glUniform3f(glGetUniformLocation(program, "volume_min"), 0.0f, 0.0f, 0.0f);
   glUniform3f(glGetUniformLocation(program, "volume_max"), mac.nx * mac.dx,
               mac.ny * mac.dy, mac.nz * mac.dz);
+  glUniform3i(glGetUniformLocation(program, "grid_size"), mac.nx, mac.ny,
+              mac.nz);
 
   glUniform1f(glGetUniformLocation(program, "step_size"), _rm_step_size);
   glUniform1f(glGetUniformLocation(program, "absorption"), _rm_absorption);
@@ -157,6 +164,17 @@ void Renderer3D::render() {
   glUseProgram(program);
   _load_uniforms();
   _load_sim_data();
+
+  // move camera in a circle around the center of the volume, in a x-z axis ring
+  float time = glfwGetTime();
+  float radius =
+      8 * std::max({mac.nx * mac.dx, mac.ny * mac.dy, mac.nz * mac.dz});
+  camera.position = vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
+                          mac.nz * mac.dz / 2.0f) +
+                    vec3f(radius * std::cos(time * 0.2f), 0.0f,
+                          radius * std::sin(time * 0.2f));
+  camera.look_at(vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
+                       mac.nz * mac.dz / 2.0f));
 
   _draw_sim();
 
