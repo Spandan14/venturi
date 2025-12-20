@@ -1,0 +1,42 @@
+dim 2D
+grid 300 x 150 with dx = 1
+window 2400 x 1200
+
+// Create two oscillating cylinders that generate von Kármán vortex streets
+set cylinder1 = cells where (i - 80)^2 + (j - 50 - 15*sin(0.1*t))^2 <= 100
+set cylinder2 = cells where (i - 80)^2 + (j - 100 + 15*sin(0.1*t))^2 <= 100
+
+// Porous barrier that creates turbulence
+set barrier = cells where (i >= 180) and (i <= 185) and ((j % 10) < 5)
+
+// Density injection zones - multiple sources
+set source_top = cells where (5 <= i <= 15) and (120 <= j <= 135)
+set source_mid = cells where (5 <= i <= 15) and (70 <= j <= 80)
+set source_bot = cells where (5 <= i <= 15) and (15 <= j <= 30)
+
+// Exit zone
+set outlet = cells where i > 290
+
+// Solid obstacles
+solid cylinder1 = true
+solid cylinder2 = true
+solid barrier = true
+
+// Initialize low background density
+density all = 0.08
+
+// Inject different density fluids from multiple sources
+density source_top = 1.2
+density source_mid = 0.9
+density source_bot = 1.5
+
+// Create pulsing flow from sources
+flow source_top = 2.5 + 0.8*sin(0.15*t)
+flow source_mid = 2.8 + 0.5*sin(0.15*t + 1.0)
+flow source_bot = 2.2 + 0.7*sin(0.15*t + 2.0)
+
+// Gentle suction at outlet
+flow_ratio outlet = 0.6
+
+// Horizontal force with slight vertical oscillation
+force all = (80 + 20*sin(0.05*t), 10*sin(0.08*t))

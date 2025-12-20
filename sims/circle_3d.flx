@@ -1,0 +1,29 @@
+dim 3D
+
+grid 20 x 20 x 20 with dx = 1
+window 1200 x 1200
+
+set circle = cells where (i - 150)^2 + (j - 50)^2 < 15^2
+
+set init_density = cells where (2 <= j <= 10) and (2 <= k <= 10)
+set sink = cells where i > 200
+
+// solid circle = true
+
+density all = 0.15
+density init_density = 1.0
+
+// flow init_density = min(3.0, 0.10 * t)
+// flow_ratio sink = max(1 - 0.01 * t, 0.5)
+
+// force all = (5, -1, 0)
+
+force all = (
+    ((j - 10) / ((i - 15)^2 + (j - 10)^2 + 2) * 40)
+    - ((j - 10) / ((i - 5)^2 + (j - 10)^2 + 2) * 40),
+
+    ((i - 5) / ((i - 5)^2 + (j - 10)^2 + 2) * 40)
+    - 9.81
+    - ((i - 15) / ((i - 15)^2 + (j - 10)^2 + 2) * 40),
+    0
+)
