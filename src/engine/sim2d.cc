@@ -235,25 +235,6 @@ void Simulation2D::_pressure_solve(float dt) {
 
   Eigen::VectorXd pressure(fluid_count);
 
-  std::ofstream divergence_file("divergence_" +
-                                std::to_string(mac.current_time) + ".vec");
-  // divergence_file << divergence;
-  for (int i = 0; i < divergence.size(); ++i) {
-    divergence_file << divergence(i) << "\n";
-  }
-  divergence_file.close();
-
-  std::ofstream pressure_file("pressure_matrix_" +
-                              std::to_string(mac.current_time) + ".mtx");
-  // pressure_file << A;
-  // pressure_file.close();
-  for (int k = 0; k < A.outerSize(); ++k) {
-    for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
-      pressure_file << it.row() << " " << it.col() << " " << it.value() << "\n";
-    }
-  }
-  pressure_file.close();
-
   switch (pressure_solver) {
 
   case PressureSolverType::ICCG: {

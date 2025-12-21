@@ -74,16 +74,40 @@ void main() {
         vec3 grid_pos = (pos - volume_min) / (volume_max - volume_min) * vec3(grid_size);
         vec3 frac = fract(grid_pos);
         vec3 dist_to_face = min(frac, 1.0 - frac);
-        float border_width = 0.01;
+        float border_width = 0.00;
         vec3 border_color = vec3(0.0, 0.0, 0.0);
 
-        // if (pos.x < 0.5 || pos.x > grid_size.x - 0.5 ||
-        //         pos.y < 0.5 || pos.y > grid_size.y - 0.5 ||
-        //         pos.z < 0.5 || pos.z > grid_size.z - 0.5) {
-        //     border_width = 0.10;
-        //     border_color = vec3(1.0, 0.0, 0.0);
-        // }
-        //
+        int lo_borders = 0;
+        int hi_borders = 0;
+        if (pos.x < volume_min.x + 0.5) {
+            lo_borders += 1;
+        }
+        if (pos.x > volume_max.x - 0.5) {
+            hi_borders += 1;
+        }
+        if (pos.y < volume_min.y + 0.5) {
+            lo_borders += 1;
+        }
+        if (pos.y > volume_max.y - 0.5) {
+            hi_borders += 1;
+        }
+        if (pos.z < volume_min.z + 0.5) {
+            lo_borders += 1;
+        }
+        if (pos.z > volume_max.z - 0.5) {
+            hi_borders += 1;
+        }
+
+        if (lo_borders >= 2) {
+            border_width = 0.05;
+            border_color = vec3(0.0, 1.0, 0.0);
+        }
+
+        if (hi_borders >= 2) {
+            border_width = 0.05;
+            border_color = vec3(1.0, 0.0, 0.0);
+        }
+
         float border = step(dist_to_face.x, border_width) + step(dist_to_face.y, border_width) + step(dist_to_face.z, border_width);
 
         border = clamp(border, 0.0, 1.0);
@@ -98,7 +122,7 @@ void main() {
 
         float a = 1.0 - exp(-density * absorption);
         vec3 c = mix(vec3(density), border_color, border);
-        c = vec3(density);
+        // c = vec3(density);
 
         color += (1.0 - alpha) * a * c;
         alpha += (1.0 - alpha) * a;

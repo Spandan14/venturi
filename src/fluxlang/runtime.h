@@ -6,8 +6,9 @@
 #include <fluxlang/ast/visitor.h>
 #include <memory>
 #include <optional>
+#include <renderer/2d/renderer_2d.h>
+#include <renderer/3d/renderer_3d.h>
 #include <renderer/renderer.h>
-#include <renderer/renderer_2d.h>
 
 using Value2D = std::function<float(float, float, float)>;
 using Value3D = std::function<float(float, float, float, float)>;

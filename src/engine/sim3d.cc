@@ -9,51 +9,27 @@ Simulation3D::Simulation3D(int nx, int ny, int nz, float dx, float dy, float dz)
       ny(ny), nz(nz), dx(dx), dy(dy), dz(dz) {}
 
 void Simulation3D::step(float dt) {
-  float total_density = 0.0f;
-  for (float d : mac.densities) {
-    total_density += d;
-  }
-
-  std::cout << "Total Density: " << total_density << std::endl;
-  std::cout << "Max density: "
-            << *std::max_element(mac.densities.begin(), mac.densities.end())
-            << std::endl;
-
-  auto vel_range_lambda = [this](std::string msg = "") {
-    std::cout << "Velocity Ranges:" << msg << ":" << std::endl;
-    float u_min = *std::min_element(mac.u.begin(), mac.u.end());
-    float u_max = *std::max_element(mac.u.begin(), mac.u.end());
-    float v_min = *std::min_element(mac.v.begin(), mac.v.end());
-    float v_max = *std::max_element(mac.v.begin(), mac.v.end());
-    float w_min = *std::min_element(mac.w.begin(), mac.w.end());
-    float w_max = *std::max_element(mac.w.begin(), mac.w.end());
-    std::cout << "u: [" << u_min << ", " << u_max << "], v: [" << v_min << ", "
-              << v_max << "], w: [" << w_min << ", " << w_max << "]"
-              << std::endl;
-  };
-
+  // float total_density = 0.0f;
+  // for (float d : mac.densities) {
+  //   total_density += d;
+  // }
+  //
+  // std::cout << "Total Density: " << total_density << std::endl;
+  // std::cout << "Max density: "
+  //           << *std::max_element(mac.densities.begin(), mac.densities.end())
+  //           << std::endl;
+  //
   _apply_forces(dt);
-
-  vel_range_lambda("after applying forces");
-
   _advect_velocities(dt);
-
-  vel_range_lambda("after advection");
 
   _pressure_solve(dt);
 
-  vel_range_lambda("after pressure solve");
-
   _advect_cell_data(dt);
-
-  vel_range_lambda("after advection of cell data");
 
   mac_next.current_time += dt;
 
   _apply_flows();
   _apply_flow_ratios();
-
-  vel_range_lambda("after flows");
 
   std::swap(mac, mac_next);
 }
@@ -296,30 +272,6 @@ void Simulation3D::_pressure_solve(float dt) {
 
   Eigen::VectorXd pressure(fluid_count);
 
-  std::ofstream divergence_file("divergence_" +
-                                std::to_string(mac.current_time) + ".vec");
-  // divergence_file << divergence;
-  for (int i = 0; i < divergence.size(); ++i) {
-    divergence_file << divergence(i) << "\n";
-    if (std::isnan(divergence(i))) {
-      std::cout << "[SIMULATION] NaN divergence encountered during "
-                   "pressure solve."
-                << std::endl;
-    }
-  }
-  divergence_file.close();
-
-  std::ofstream pressure_file("pressure_matrix_" +
-                              std::to_string(mac.current_time) + ".mtx");
-  // pressure_file << A;
-  // pressure_file.close();
-  for (int k = 0; k < A.outerSize(); ++k) {
-    for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
-      pressure_file << it.row() << " " << it.col() << " " << it.value() << "\n";
-    }
-  }
-  pressure_file.close();
-
   switch (pressure_solver) {
   case PressureSolverType::ICCG: {
     ICCGSolver iccg_solver = ICCGSolver(1000, 1e-6f);
@@ -335,11 +287,6 @@ void Simulation3D::_pressure_solve(float dt) {
       for (int i = 0; i < nx; ++i) {
         int c_idx = mac.idx(i, j, k);
         if (fluid_idx[c_idx] != -1) {
-          if (std::isnan(pressure[fluid_idx[c_idx]])) {
-            throw std::runtime_error(
-                "[SIMULATION] NaN pressure encountered during pressure "
-                "solve.");
-          }
           mac_next.pressures[c_idx] = pressure[fluid_idx[c_idx]];
         } else {
           mac_next.pressures[c_idx] = 0.0f;

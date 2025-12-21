@@ -1,5 +1,5 @@
 add_library(renderer 
-    renderer_2d.cc
+    2d/renderer_2d.cc
     3d/renderer_3d.cc
 )
 

@@ -4,20 +4,40 @@
 #include "utils/interpolators.h"
 #include <iostream>
 
-Renderer3D::Renderer3D(const MAC3D &mac, const Camera &camera, int screen_width,
-                       int screen_height)
+Renderer3D::Renderer3D(const MAC3D &mac, std::shared_ptr<Camera> camera,
+                       int screen_width, int screen_height)
     : mac(mac), camera(camera), screen_width(screen_width),
       screen_height(screen_height), program(0), vao(0), vbo(0) {
+  gimbal_control = std::make_shared<GimbalControl>(
+      GimbalControl(this->camera,
+                    vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
+                          mac.nz * mac.dz / 2.0f),
+                    mac.nx * mac.dx * 8.0f));
+  _dragging = false;
+  _last_mouse_x = 0.0;
+  _last_mouse_y = 0.0;
+
   _init_gl();
   _init_data();
+  _init_handlers();
 }
 
 Renderer3D::Renderer3D(const MAC3D &mac, int screen_width, int screen_height)
     : mac(mac), screen_width(screen_width), screen_height(screen_height),
       program(0), vao(0), vbo(0) {
-  camera = Camera();
+  camera = std::make_shared<Camera>(Camera());
+  gimbal_control = std::make_shared<GimbalControl>(
+      GimbalControl(camera,
+                    vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
+                          mac.nz * mac.dz / 2.0f),
+                    mac.nx * mac.dx * 8.0f));
+  _dragging = false;
+  _last_mouse_x = 0.0;
+  _last_mouse_y = 0.0;
+
   _init_gl();
   _init_data();
+  _init_handlers();
 }
 
 void Renderer3D::_init_gl() {
@@ -39,6 +59,7 @@ void Renderer3D::_init_gl() {
   }
 
   glfwMakeContextCurrent(_window);
+  glfwSetWindowUserPointer(_window, this);
 
   glewExperimental = GL_TRUE;
   if (glewInit() != GLEW_OK) {
@@ -91,19 +112,27 @@ void Renderer3D::_init_data() {
 
   glGenTextures(1, &density_texture);
 
-  camera.position =
-      vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
-            -5 * std::max({mac.nx * mac.dx, mac.ny * mac.dy, mac.nz * mac.dz}));
-  camera.rotate_deg(180.f, vec3f(0.0f, 1.0f, 0.0f));
+  gimbal_control->update_camera();
+  // camera->position =
+  //     vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
+  //           -8 * std::max({mac.nx * mac.dx, mac.ny * mac.dy, mac.nz *
+  //           mac.dz}));
+  // camera->rotate_deg(180.f, vec3f(0.0f, 1.0f, 0.0f));
+}
+
+void Renderer3D::_init_handlers() {
+  glfwSetMouseButtonCallback(_window, _mouse_button_callback);
+  glfwSetCursorPosCallback(_window, _mouse_move_callback);
+  glfwSetScrollCallback(_window, _mouse_scroll_callback);
 }
 
 void Renderer3D::_load_uniforms() {
   glUniform3fv(glGetUniformLocation(program, "camera_pos"), 1,
-               camera.position.data());
+               camera->position.data());
   glUniformMatrix4fv(glGetUniformLocation(program, "inv_view"), 1, GL_FALSE,
-                     camera.get_view_matrix_inverse().data());
+                     camera->get_view_matrix_inverse().data());
   glUniformMatrix4fv(glGetUniformLocation(program, "inv_proj"), 1, GL_FALSE,
-                     camera.get_projection_matrix_inverse().data());
+                     camera->get_projection_matrix_inverse().data());
 
   glUniform3f(glGetUniformLocation(program, "volume_min"), 0.0f, 0.0f, 0.0f);
   glUniform3f(glGetUniformLocation(program, "volume_max"), mac.nx * mac.dx,
@@ -131,6 +160,69 @@ void Renderer3D::_load_sim_data() {
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+}
+
+void Renderer3D::_on_mouse_button(int button, int action, int mods) {
+  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    if (action == GLFW_PRESS) {
+      this->_dragging = true;
+      glfwGetCursorPos(_window, &this->_last_mouse_x, &this->_last_mouse_y);
+    } else if (action == GLFW_RELEASE) {
+      this->_dragging = false;
+    }
+  }
+}
+
+void Renderer3D::_mouse_button_callback(GLFWwindow *window, int button,
+                                        int action, int mods) {
+  auto *renderer = static_cast<Renderer3D *>(glfwGetWindowUserPointer(window));
+
+  if (!renderer) {
+    return;
+  }
+
+  renderer->_on_mouse_button(button, action, mods);
+}
+
+void Renderer3D::_on_mouse_move(double x_pos, double y_pos) {
+  if (!_dragging) {
+    return;
+  }
+
+  double delta_x = x_pos - this->_last_mouse_x;
+  double delta_y = y_pos - this->_last_mouse_y;
+
+  this->gimbal_control->handle_mouse_move(static_cast<float>(delta_x),
+                                          static_cast<float>(delta_y));
+
+  this->_last_mouse_x = x_pos;
+  this->_last_mouse_y = y_pos;
+}
+
+void Renderer3D::_mouse_move_callback(GLFWwindow *window, double x_pos,
+                                      double y_pos) {
+  auto *renderer = static_cast<Renderer3D *>(glfwGetWindowUserPointer(window));
+
+  if (!renderer) {
+    return;
+  }
+
+  renderer->_on_mouse_move(x_pos, y_pos);
+}
+
+void Renderer3D::_on_mouse_scroll(double x_offset, double y_offset) {
+  this->gimbal_control->handle_mouse_scroll(static_cast<float>(y_offset));
+}
+
+void Renderer3D::_mouse_scroll_callback(GLFWwindow *window, double x_offset,
+                                        double y_offset) {
+  auto *renderer = static_cast<Renderer3D *>(glfwGetWindowUserPointer(window));
+
+  if (!renderer) {
+    return;
+  }
+
+  renderer->_on_mouse_scroll(x_offset, y_offset);
 }
 
 Renderer3D::~Renderer3D() {
@@ -164,17 +256,6 @@ void Renderer3D::render() {
   glUseProgram(program);
   _load_uniforms();
   _load_sim_data();
-
-  // move camera in a circle around the center of the volume, in a x-z axis ring
-  float time = glfwGetTime();
-  float radius =
-      8 * std::max({mac.nx * mac.dx, mac.ny * mac.dy, mac.nz * mac.dz});
-  camera.position = vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
-                          mac.nz * mac.dz / 2.0f) +
-                    vec3f(radius * std::cos(time * 0.2f), 0.0f,
-                          radius * std::sin(time * 0.2f));
-  camera.look_at(vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
-                       mac.nz * mac.dz / 2.0f));
 
   _draw_sim();
 

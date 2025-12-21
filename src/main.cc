@@ -5,7 +5,6 @@
 #include <fluxlang/transformer.h>
 #include <iostream>
 #include <peglib.h>
-#include <renderer/renderer_2d.h>
 #include <utils/physical_consts.h>
 
 int main() {

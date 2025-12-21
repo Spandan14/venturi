@@ -1,6 +1,6 @@
 dim 3D
 
-grid 20 x 20 x 20 with dx = 1
+grid 30 x 30 x 30 with dx = 1
 window 1200 x 1200
 
 set circle = cells where (i - 150)^2 + (j - 50)^2 < 15^2
