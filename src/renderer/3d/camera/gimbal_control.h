@@ -54,6 +54,16 @@ public:
     update_camera();
   }
 
+  [[nodiscard]] float get_radius() const { return radius; }
+  [[nodiscard]] float get_azimuth() const { return azimuth; }
+  [[nodiscard]] float get_azimuth_deg() const {
+    return azimuth * 180.0f / M_PI;
+  }
+  [[nodiscard]] float get_elevation() const { return elevation; }
+  [[nodiscard]] float get_elevation_deg() const {
+    return elevation * 180.0f / M_PI;
+  }
+
 private:
   std::shared_ptr<Camera> camera;
   vec3f center;

@@ -5,6 +5,9 @@ out vec4 frag_color;
 
 uniform sampler3D density_tex;
 
+uniform sampler3D solid_tex;
+uniform vec3 solid_color;
+
 uniform vec3 camera_pos;
 uniform mat4 inv_view;
 uniform mat4 inv_proj;
@@ -44,11 +47,40 @@ bool intersect_aabb(vec3 ray_origin, vec3 ray_dir, vec3 box_min, vec3 box_max, o
     return t_far >= max(t_near, 0.0);
 }
 
-float sample_density(vec3 pos) {
-    vec3
-    tex_coord_3d = (pos - volume_min) / (volume_max - volume_min);
-    return texture(density_tex, tex_coord_3d).r;
+ivec3 world_to_cell(vec3 pos) {
+    vec3 p = (pos - volume_min) / (volume_max - volume_min);
+    return ivec3(floor(p * vec3(grid_size)));
 }
+
+float sample_density(vec3 pos) {
+    // vec3 tex_coord_3d = (pos - volume_min) / (volume_max - volume_min);
+    // if (texture(solid_tex, tex_coord_3d).r > 0.5) {
+    //     return 100.0;
+    // }
+    // return texture(density_tex, tex_coord_3d).r;
+
+    ivec3 cell = clamp(world_to_cell(pos), ivec3(0), grid_size - ivec3(1));
+    return texelFetch(density_tex, cell, 0).r;
+}
+
+bool sample_solid(vec3 pos) {
+    // vec3 tex_coord_3d = (pos - volume_min) / (volume_max - volume_min);
+    // return texture(solid_tex, tex_coord_3d).r > 0.5;
+
+    ivec3 cell = clamp(world_to_cell(pos), ivec3(0), grid_size - ivec3(1));
+    float v = texelFetch(solid_tex, cell, 0).r;
+
+    return v > 0.5;
+}
+
+// vec3 estimate_normal(vec3 pos) {
+//     float e = 0.01;
+//     return normalize(vec3(
+//             sample_solid(pos + vec3(e, 0, 0)) - sample_solid(pos - vec3(e, 0, 0)),
+//             sample_solid(pos + vec3(0, e, 0)) - sample_solid(pos - vec3(0, e, 0)),
+//             sample_solid(pos + vec3(0, 0, e)) - sample_solid(pos - vec3(0, 0, e))
+//         ));
+// }
 
 void main() {
     vec3 ray_orig = camera_pos;
@@ -113,6 +145,14 @@ void main() {
 
         border = clamp(border, 0.0, 1.0);
 
+        bool solid = sample_solid(pos);
+        if (solid && border_width == 0.0) {
+            float remaining = 1.0 - alpha;
+            color += remaining * solid_color;
+            alpha = 1.0;
+            break;
+        }
+
         float density = sample_density(pos);
 
         // guard
@@ -123,7 +163,7 @@ void main() {
 
         float a = 1.0 - exp(-density * absorption);
         vec3 c = mix(vec3(density), border_color, border);
-        // c = vec3(density);
+        c = vec3(density);
 
         color += (1.0 - alpha) * a * c;
         alpha += (1.0 - alpha) * a;

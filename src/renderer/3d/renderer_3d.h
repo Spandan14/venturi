@@ -31,6 +31,9 @@ private:
   GLuint vao, vbo;
   GLuint density_texture;
 
+  GLuint solid_texture;
+  vec3f solid_color = vec3f(1.f, 0.f, 0.f);
+
   float _rm_step_size = 0.3f;
   float _rm_absorption = 1.0f;
   int _rm_max_steps = 256;

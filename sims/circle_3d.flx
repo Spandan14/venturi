@@ -3,12 +3,12 @@ dim 3D
 grid 30 x 30 x 30 with dx = 1
 window 1760 x 800
 
-set circle = cells where (i - 150)^2 + (j - 50)^2 < 15^2
+set circle = cells where (i - 15)^2 + (j - 15)^2 + (k - 5)^2 < 8^2
 
 set init_density = cells where (2 <= j <= 10) and (2 <= k <= 10)
 set sink = cells where i > 200
 
-// solid circle = true
+solid circle = true
 
 density all = 0.15
 density init_density = 1.0

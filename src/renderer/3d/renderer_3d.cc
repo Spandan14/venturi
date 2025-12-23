@@ -3,6 +3,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl2.h"
 #include "renderer/renderer.h"
+#include <OpenGL/gl.h>
 
 Renderer3D::Renderer3D(const MAC3D &mac, std::shared_ptr<Camera> camera,
                        int screen_width, int screen_height)
@@ -140,6 +141,9 @@ void Renderer3D::_init_imgui() {
 
   ImGui_ImplGlfw_InitForOpenGL(_window, true);
   ImGui_ImplOpenGL3_Init("#version 410");
+
+  ImGui::SetNextWindowSize(ImVec2(200, screen_height));
+  ImGui::SetNextWindowPos(ImVec2(screen_width - 200, 0));
 }
 
 void Renderer3D::_setup_imgui() {
@@ -147,8 +151,6 @@ void Renderer3D::_setup_imgui() {
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
 
-  ImGui::SetNextWindowSize(ImVec2(200, screen_height));
-  ImGui::SetNextWindowPos(ImVec2(screen_width - 200, 0));
   ImGui::Begin("Debug");
 
   // ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
@@ -157,6 +159,19 @@ void Renderer3D::_setup_imgui() {
 
   ImGui::Text("Simulation Time: %.3f s", mac.current_time);
   ImGui::Separator();
+
+  ImGui::Text("Camera Information:");
+  ImGui::Text("Position: (%.3f, %.3f, %.3f)", camera->position.x(),
+              camera->position.y(), camera->position.z());
+  ImGui::Text("Azimuth: %.3f deg", gimbal_control->get_azimuth_deg());
+  ImGui::Text("Elevation: %.3f deg", gimbal_control->get_elevation_deg());
+  ImGui::Text("Radius: %.3f", gimbal_control->get_radius());
+  ImGui::Separator();
+
+  ImGui::PushItemWidth(150);
+  ImGui::ColorEdit3("Solid Color", (float *)&solid_color,
+                    ImGuiColorEditFlags_NoPicker);
+  ImGui::PopItemWidth();
 
   // ImGui::PopStyleColor();
   ImGui::End();
@@ -188,6 +203,13 @@ void Renderer3D::_load_uniforms() {
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_3D, density_texture);
   glUniform1i(glGetUniformLocation(program, "density_tex"), 0);
+
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_3D, solid_texture);
+  glUniform1i(glGetUniformLocation(program, "solid_tex"), 1);
+
+  glUniform3fv(glGetUniformLocation(program, "solid_color"), 1,
+               solid_color.data());
 }
 
 void Renderer3D::_load_sim_data() {
@@ -198,6 +220,30 @@ void Renderer3D::_load_sim_data() {
 
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+  glBindTexture(GL_TEXTURE_3D, solid_texture);
+
+  std::vector<uint8_t> solid_data(mac.nx * mac.ny * mac.nz);
+  for (int k = 0; k < mac.nz; ++k) {
+    for (int j = 0; j < mac.ny; ++j) {
+      for (int i = 0; i < mac.nx; ++i) {
+        int idx = i + j * mac.nx + k * mac.nx * mac.ny;
+        solid_data[idx] = mac.is_solid[idx] ? 255 : 0;
+      }
+    }
+  }
+
+  glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8UI, mac.nx, mac.ny, mac.nz, 0,
+               GL_RED_INTEGER, GL_UNSIGNED_BYTE, solid_data.data());
+
+  // glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, mac.nx, mac.ny, mac.nz, 0, GL_RED,
+  //              GL_FLOAT, solid_data.data());
+
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
