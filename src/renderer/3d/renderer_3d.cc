@@ -1,13 +1,15 @@
 #include "renderer_3d.h"
 #include "fluxlang/utils.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl2.h"
 #include "renderer/renderer.h"
-#include "utils/interpolators.h"
-#include <iostream>
 
 Renderer3D::Renderer3D(const MAC3D &mac, std::shared_ptr<Camera> camera,
                        int screen_width, int screen_height)
     : mac(mac), camera(camera), screen_width(screen_width),
       screen_height(screen_height), program(0), vao(0), vbo(0) {
+  camera->aspect_ratio =
+      static_cast<float>(screen_width) / static_cast<float>(screen_height);
   gimbal_control = std::make_shared<GimbalControl>(
       GimbalControl(this->camera,
                     vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
@@ -20,12 +22,15 @@ Renderer3D::Renderer3D(const MAC3D &mac, std::shared_ptr<Camera> camera,
   _init_gl();
   _init_data();
   _init_handlers();
+  _init_imgui();
 }
 
 Renderer3D::Renderer3D(const MAC3D &mac, int screen_width, int screen_height)
     : mac(mac), screen_width(screen_width), screen_height(screen_height),
       program(0), vao(0), vbo(0) {
   camera = std::make_shared<Camera>(Camera());
+  camera->aspect_ratio =
+      static_cast<float>(screen_width) / static_cast<float>(screen_height);
   gimbal_control = std::make_shared<GimbalControl>(
       GimbalControl(camera,
                     vec3f(mac.nx * mac.dx / 2.0f, mac.ny * mac.dy / 2.0f,
@@ -38,6 +43,8 @@ Renderer3D::Renderer3D(const MAC3D &mac, int screen_width, int screen_height)
   _init_gl();
   _init_data();
   _init_handlers();
+  _init_imgui();
+  _setup_imgui();
 }
 
 void Renderer3D::_init_gl() {
@@ -124,6 +131,38 @@ void Renderer3D::_init_handlers() {
   glfwSetMouseButtonCallback(_window, _mouse_button_callback);
   glfwSetCursorPosCallback(_window, _mouse_move_callback);
   glfwSetScrollCallback(_window, _mouse_scroll_callback);
+  glfwSetFramebufferSizeCallback(_window, _framebuffer_resize_callback);
+}
+
+void Renderer3D::_init_imgui() {
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+
+  ImGui_ImplGlfw_InitForOpenGL(_window, true);
+  ImGui_ImplOpenGL3_Init("#version 410");
+}
+
+void Renderer3D::_setup_imgui() {
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+
+  ImGui::SetNextWindowSize(ImVec2(200, screen_height));
+  ImGui::SetNextWindowPos(ImVec2(screen_width - 200, 0));
+  ImGui::Begin("Debug");
+
+  // ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+  ImGui::Text("FPS: %.3f", ImGui::GetIO().Framerate);
+  ImGui::Separator();
+
+  ImGui::Text("Simulation Time: %.3f s", mac.current_time);
+  ImGui::Separator();
+
+  // ImGui::PopStyleColor();
+  ImGui::End();
+
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void Renderer3D::_load_uniforms() {
@@ -133,6 +172,8 @@ void Renderer3D::_load_uniforms() {
                      camera->get_view_matrix_inverse().data());
   glUniformMatrix4fv(glGetUniformLocation(program, "inv_proj"), 1, GL_FALSE,
                      camera->get_projection_matrix_inverse().data());
+  glUniform1f(glGetUniformLocation(program, "aspect_ratio"),
+              camera->aspect_ratio);
 
   glUniform3f(glGetUniformLocation(program, "volume_min"), 0.0f, 0.0f, 0.0f);
   glUniform3f(glGetUniformLocation(program, "volume_max"), mac.nx * mac.dx,
@@ -225,7 +266,31 @@ void Renderer3D::_mouse_scroll_callback(GLFWwindow *window, double x_offset,
   renderer->_on_mouse_scroll(x_offset, y_offset);
 }
 
+void Renderer3D::_on_framebuffer_resize(int width, int height) {
+  this->screen_width = width;
+  this->screen_height = height;
+  glViewport(0, 0, width, height);
+
+  camera->aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+}
+
+void Renderer3D::_framebuffer_resize_callback(GLFWwindow *window, int width,
+                                              int height) {
+  auto *renderer = static_cast<Renderer3D *>(glfwGetWindowUserPointer(window));
+
+  if (!renderer) {
+    return;
+  }
+
+  renderer->_on_framebuffer_resize(width, height);
+}
+
 Renderer3D::~Renderer3D() {
+  // imgui shutdown
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+
   glDeleteProgram(program);
   glfwDestroyWindow(_window);
   glfwTerminate();
@@ -253,11 +318,22 @@ GLuint Renderer3D::compile_shader(const std::string &source,
 
 void Renderer3D::render() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
   glUseProgram(program);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glDisable(GL_BLEND);
   _load_uniforms();
   _load_sim_data();
 
   _draw_sim();
+
+  glUseProgram(0);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  _setup_imgui();
 
   glfwSwapBuffers(_window);
 }

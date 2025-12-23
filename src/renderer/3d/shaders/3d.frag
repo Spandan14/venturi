@@ -8,6 +8,7 @@ uniform sampler3D density_tex;
 uniform vec3 camera_pos;
 uniform mat4 inv_view;
 uniform mat4 inv_proj;
+uniform float aspect_ratio;
 
 uniform vec3 volume_min;
 uniform vec3 volume_max;

@@ -3,7 +3,6 @@
 #include <engine/sim2d.h>
 #include <fluxlang/parser.h>
 #include <fluxlang/transformer.h>
-#include <iostream>
 #include <peglib.h>
 #include <utils/physical_consts.h>
 
@@ -15,7 +14,6 @@ int main() {
 
   FluxASTTransformer transformer(*ast);
   auto script = transformer.transform();
-  std::cout << script->to_string() << std::endl;
 
   Runtime runtime(std::move(script));
   runtime.run();

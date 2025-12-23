@@ -31,4 +31,6 @@ target_link_libraries(renderer PUBLIC
     OpenGL::GL
     glfw
     /opt/homebrew/lib/libGLEW.dylib
-    Eigen3::Eigen)
+    Eigen3::Eigen
+    imgui
+)

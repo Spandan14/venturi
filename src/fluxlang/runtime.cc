@@ -24,8 +24,6 @@ void Runtime::run() {
     auto step_ms =
         std::chrono::duration<float>(this_frame - last_frame).count();
 
-    // std::cout << "Step ms: " << step_ms * 1000.0f << " ms" << std::endl;
-    //
     // FPS cap
     if (step_ms > 0.01f) {
       _step(step_ms);

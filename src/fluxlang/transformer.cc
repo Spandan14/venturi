@@ -14,7 +14,6 @@ std::unique_ptr<Flux::Script> FluxASTTransformer::transform() {
     }
 
     auto stmt = _transform_statement(*stmt_child);
-    std::cout << "Transformed Statement: " << stmt->to_string() << std::endl;
     statements.push_back(std::move(stmt));
   }
 

@@ -18,4 +18,5 @@ target_link_libraries(Venturi
         renderer
         fluxlang
         Eigen3::Eigen
+        imgui
 )

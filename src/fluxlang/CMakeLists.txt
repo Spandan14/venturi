@@ -19,4 +19,6 @@ find_package(GLFW3 REQUIRED)
 
 target_link_libraries(fluxlang PUBLIC glfw
     /opt/homebrew/lib/libGLEW.dylib
-    Eigen3::Eigen)
+    Eigen3::Eigen
+    imgui
+)
