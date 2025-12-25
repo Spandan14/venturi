@@ -6,11 +6,17 @@
 #include <peglib.h>
 #include <utils/physical_consts.h>
 
-int main() {
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " <script.flx>" << std::endl;
+    return 1;
+  }
+
+  std::string script_path = argv[1];
   Parser parser;
 
   // Simulation2D sim = Simulation2D(220, 100, 1, 1);
-  auto ast = parser.parse("../../../sims/circle_3d.flx");
+  auto ast = parser.parse(script_path.c_str());
 
   FluxASTTransformer transformer(*ast);
   auto script = transformer.transform();

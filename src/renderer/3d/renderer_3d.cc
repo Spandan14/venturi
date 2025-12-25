@@ -250,6 +250,9 @@ void Renderer3D::_load_sim_data() {
 }
 
 void Renderer3D::_on_mouse_button(int button, int action, int mods) {
+  if (ImGui::GetIO().WantCaptureMouse)
+    return;
+
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     if (action == GLFW_PRESS) {
       this->_dragging = true;
@@ -272,9 +275,11 @@ void Renderer3D::_mouse_button_callback(GLFWwindow *window, int button,
 }
 
 void Renderer3D::_on_mouse_move(double x_pos, double y_pos) {
-  if (!_dragging) {
+  if (ImGui::GetIO().WantCaptureMouse)
     return;
-  }
+
+  if (!_dragging)
+    return;
 
   double delta_x = x_pos - this->_last_mouse_x;
   double delta_y = y_pos - this->_last_mouse_y;
@@ -298,6 +303,9 @@ void Renderer3D::_mouse_move_callback(GLFWwindow *window, double x_pos,
 }
 
 void Renderer3D::_on_mouse_scroll(double x_offset, double y_offset) {
+  if (ImGui::GetIO().WantCaptureMouse)
+    return;
+
   this->gimbal_control->handle_mouse_scroll(static_cast<float>(y_offset));
 }
 

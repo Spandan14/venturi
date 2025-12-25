@@ -1,6 +1,5 @@
 #include "sim3d.h"
 #include "solver/iccg.h"
-#include <fstream>
 #include <iostream>
 #include <utils/physical_consts.h>
 
@@ -30,6 +29,7 @@ void Simulation3D::step(float dt) {
 
   _apply_flows();
   _apply_flow_ratios();
+  _apply_solids(solid_initializer);
 
   std::swap(mac, mac_next);
 }
@@ -60,6 +60,8 @@ void Simulation3D::initialize_forces(const ForceInitializer &initializer) {
 }
 
 void Simulation3D::initialize_solids(const SolidInitializer &initializer) {
+  solid_initializer = initializer;
+
   for (int k = 0; k < nz; ++k) {
     for (int j = 0; j < ny; ++j) {
       for (int i = 0; i < nx; ++i) {
@@ -173,6 +175,29 @@ void Simulation3D::_apply_flow_ratios() {
         mac_next.densities[mac_next.idx(i, j, k)] *= ratio;
         mac_next.densities[mac_next.idx(i, j, k)] =
             std::max(0.0f, mac_next.densities[mac_next.idx(i, j, k)]);
+      }
+    }
+  }
+}
+
+void Simulation3D::_apply_solids(const SolidInitializer &initializer) {
+  for (int k = 0; k < nz; ++k) {
+    for (int j = 0; j < ny; ++j) {
+      for (int i = 0; i < nx; ++i) {
+        mac_next.is_solid[mac.idx(i, j, k)] =
+            initializer(i, j, k, mac_next.current_time);
+
+        if (mac_next.is_solid[mac.idx(i, j, k)]) {
+          // solid cell, set velocities to 0
+          mac_next.u[mac.u_idx(i, j, k)] = 0.0f;
+          mac_next.u[mac.u_idx(i + 1, j, k)] = 0.0f;
+          mac_next.v[mac.v_idx(i, j, k)] = 0.0f;
+          mac_next.v[mac.v_idx(i, j + 1, k)] = 0.0f;
+          mac_next.w[mac.w_idx(i, j, k)] = 0.0f;
+          mac_next.w[mac.w_idx(i, j, k + 1)] = 0.0f;
+
+          mac_next.densities[mac.idx(i, j, k)] = 0.00f;
+        }
       }
     }
   }

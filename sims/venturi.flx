@@ -1,0 +1,22 @@
+dim 3D
+
+grid 100 x 15 x 15 with dx = 1
+window 1760 x 800
+
+set top_circle = cells where (i - 30 - 2 * t)^2 + (j - 52.5)^2 <= 1806.25
+set bottom_circle = cells where (i - 30 )^2 + (j + 37.5)^2 <= 1806.25
+
+solid top_circle = true
+solid bottom_circle = true
+
+set source = cells where (i < 3)
+set sink = cells where (i > 70)
+
+solid venturi = true
+
+density all = 0.20
+
+flow source = 0.01
+flow_ratio sink = max(0.9 - 0.02 * t, 0.7)
+
+force all = (100, 0, 0)

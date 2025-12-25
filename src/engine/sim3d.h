@@ -56,4 +56,7 @@ private:
 
   FlowRatioGenerator flow_ratio_generator;
   void _apply_flow_ratios();
+
+  SolidInitializer solid_initializer;
+  void _apply_solids(const SolidInitializer &initializer);
 };
