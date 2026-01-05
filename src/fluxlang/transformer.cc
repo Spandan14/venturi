@@ -386,7 +386,8 @@ FluxASTTransformer::_transform_expression(peg::Ast &node) {
     return _transform_chained_expression(reduced_expr);
   } else if (reduced_expr.name == "MulExpr") {
     return _transform_chained_expression(reduced_expr);
-  } else if (reduced_expr.name == "Number" || reduced_expr.name == "Boolean") {
+  } else if (reduced_expr.name == "Number" || reduced_expr.name == "Boolean" ||
+             reduced_expr.name == "MathConstant") {
     return _transform_literal_expression(reduced_expr);
   } else if (reduced_expr.name == "Var") {
     return _transform_gen_variable_expression(reduced_expr);
@@ -627,6 +628,21 @@ FluxASTTransformer::_transform_literal_expression(peg::Ast &node) {
 
     std::string token = std::string(node.token);
     double value = (token == "true") ? 1.0 : 0.0;
+    return std::make_unique<Flux::LiteralExpression>(value);
+  } else if (node.name == "MathConstant") {
+    if (!node.is_token) {
+      throw std::runtime_error("MathConstant node is not a token!");
+    }
+
+    std::string token = std::string(node.token);
+    double value;
+    if (token == "pi") {
+      value = 3.141592653589793;
+    } else if (token == "e") {
+      value = 2.718281828459045;
+    } else {
+      throw std::runtime_error("Unknown MathConstant token: " + token);
+    }
     return std::make_unique<Flux::LiteralExpression>(value);
   } else {
     throw std::runtime_error("Unknown LiteralExpression type: " + node.name);
