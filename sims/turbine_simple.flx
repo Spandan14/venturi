@@ -1,0 +1,21 @@
+dim 3D
+
+grid 20 x 20 x 50 with dx = 1
+window 1760 x 800
+
+set fin_1 = cells where (abs(-1 * (i - 10 - 5 * cos(0 + 2 * t)) * cos(0 + 2 * t - pi / 2) + (j - 10 - 5 * sin(0 + 2 * t)) * sin(0 + 2 * t + pi / 2)) <= 1 and abs((i - 10 - 5 * cos(0 + 2 * t)) * sin(0 + 2 * t - pi / 2) + (j - 10 - 5 * sin(0 + 2 * t)) * cos(0 + 2 * t + pi / 2)) <= 2) and (10 <= k <= 12)
+set fin_2 = cells where (abs(-1 * (i - 10 - 5 * cos(pi / 3 + 2 * t)) * cos(pi / 3 + 2 * t - pi / 2) + (j - 10 - 5 * sin(pi / 3 + 2 * t)) * sin(pi / 3 + 2 * t + pi / 2)) <= 1 and abs((i - 10 - 5 * cos(pi / 3 + 2 * t)) * sin(pi / 3 + 2 * t - pi / 2) + (j - 10 - 5 * sin(pi / 3 + 2 * t)) * cos(pi / 3 + 2 * t + pi / 2)) <= 2) and (10 <= k <= 12)
+set fin_3 = cells where (abs(-1 * (i - 10 - 5 * cos(2 * pi / 3 + 2 * t)) * cos(2 * pi / 3 + 2 * t - pi / 2) + (j - 10 - 5 * sin(2 * pi / 3 + 2 * t)) * sin(2 * pi / 3 + 2 * t + pi / 2)) <= 1 and abs((i - 10 - 5 * cos(2 * pi / 3 + 2 * t)) * sin(2 * pi / 3 + 2 * t - pi / 2) + (j - 10 - 5 * sin(2 * pi / 3 + 2 * t)) * cos(2 * pi / 3 + 2 * t + pi / 2)) <= 2) and (10 <= k <= 12)
+
+solid fin_1 = true
+solid fin_2 = true
+solid fin_3 = true
+
+set source = cells where k < 5 and ((6 <= i <= 14) and (6 <= j <= 14)) 
+set sink = cells where (k > 48)
+
+density all = 0.08
+flow source = min(0.03 * t, 0.6)
+// flow_ratio sink = 0.99
+
+force all = (0, 0, 100)

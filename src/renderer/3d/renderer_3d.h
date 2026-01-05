@@ -8,7 +8,10 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <implot.h>
 #include <memory>
+
+const int IMGUI_BUFFER_SIZE = 1024;
 
 typedef Eigen::Vector3d vec3d;
 
@@ -41,11 +44,16 @@ private:
   void _init_gl();
   void _init_data();
   void _init_handlers();
+
   void _init_imgui();
 
   void _load_uniforms();
   void _load_sim_data();
 
+  float time_buffer[IMGUI_BUFFER_SIZE] = {};
+  float total_density_buffer[IMGUI_BUFFER_SIZE] = {};
+  int buffer_size = 0;
+  int buffer_idx = 0;
   void _setup_imgui();
 
   bool _dragging;

@@ -5,6 +5,8 @@ add_library(imgui
     imgui/imgui_widgets.cpp
     imgui/backends/imgui_impl_opengl3.cpp
     imgui/backends/imgui_impl_glfw.cpp
+    imgui/implot.cpp
+    imgui/implot_items.cpp
 )
 
 target_include_directories(imgui PUBLIC 

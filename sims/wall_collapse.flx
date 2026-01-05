@@ -1,0 +1,23 @@
+dim 3D
+
+grid 30 x 30 x 80 with dx = 1
+window 1760 x 800
+
+set wall = cells where (k == 35) and (5 + 5 * sin(15 * t) <= j <= 25 + 5 * sin(15 * t))
+// set wall_1 = cells where (k == 18) and ((4 <= i <= 16) and (4 <= j <= 16))
+// set wall_2 = cells where (k == 21) and ((6 <= i <= 14) and (6 <= j <= 14))
+// set wall_3 = cells where (k == 24) and ((8 <= i <= 12) and (8 <= j <= 12))
+
+solid wall = true
+// solid wall_1 = true
+// solid wall_2 = true    
+// solid wall_3 = true
+
+set source = cells where k < 5 
+set sink = cells where k > 65
+
+density all = 0.06
+flow source = min(0.015 * t, 0.08)
+flow_ratio sink = 0.999
+
+force all = (0, 0, 50)

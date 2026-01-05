@@ -4,6 +4,7 @@
 #include "imgui_impl_opengl2.h"
 #include "renderer/renderer.h"
 #include <OpenGL/gl.h>
+#include <numeric>
 
 Renderer3D::Renderer3D(const MAC3D &mac, std::shared_ptr<Camera> camera,
                        int screen_width, int screen_height)
@@ -147,18 +148,81 @@ void Renderer3D::_init_imgui() {
 }
 
 void Renderer3D::_setup_imgui() {
+  // preparation
+  float total_density =
+      std::accumulate(mac.densities.begin(), mac.densities.end(), 0.0f);
+
+  time_buffer[buffer_idx] = mac.current_time;
+  total_density_buffer[buffer_idx] = total_density;
+  buffer_idx = (buffer_idx + 1) % IMGUI_BUFFER_SIZE;
+  buffer_size = std::min(buffer_size + 1, IMGUI_BUFFER_SIZE);
+
+  // imgui init
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
 
   ImGui::Begin("Debug");
 
-  // ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
   ImGui::Text("FPS: %.3f", ImGui::GetIO().Framerate);
   ImGui::Separator();
 
+  ImGui::Text("Simulation Information: ");
   ImGui::Text("Simulation Time: %.3f s", mac.current_time);
-  ImGui::Separator();
+
+  ImGui::Text(
+      "Simulation Total Density: %.3f",
+      std::accumulate(mac.densities.begin(), mac.densities.end(), 0.0f));
+  ImGui::Spacing();
+
+  ImPlot::CreateContext();
+  if (ImPlot::BeginPlot("Total Density", ImVec2(600, 300))) {
+    float time_temp[IMGUI_BUFFER_SIZE];
+    float density_temp[IMGUI_BUFFER_SIZE];
+
+    for (int i = 0; i < buffer_size; ++i) {
+      int idx = (buffer_idx + i) % IMGUI_BUFFER_SIZE;
+      time_temp[i] = time_buffer[idx];
+      density_temp[i] = total_density_buffer[idx];
+    }
+
+    float min_density = *std::min_element(total_density_buffer,
+                                          total_density_buffer + buffer_size);
+    float max_density = *std::max_element(total_density_buffer,
+                                          total_density_buffer + buffer_size);
+
+    float range = max_density - min_density;
+    float padding = range * 0.1f;
+    if (range < 0.01f)
+      padding = 0.1f;
+
+    float alpha = 0.1f; // lower = smoother (0.05-0.2 is good range)
+    float y_min = FLT_MAX;
+    float y_max = -FLT_MAX;
+    y_min = y_min == FLT_MAX
+                ? min_density - padding
+                : y_min * (1 - alpha) + (min_density - padding) * alpha;
+    y_max = y_max == -FLT_MAX
+                ? max_density + padding
+                : y_max * (1 - alpha) + (max_density + padding) * alpha;
+
+    ImPlot::SetupAxes("Time", "Value", ImPlotAxisFlags_None,
+                      ImPlotAxisFlags_AutoFit);
+
+    if (buffer_size > 1) {
+      float x_min = std::max(floor(mac.current_time - 5.f), 0.f);
+      float x_max = floor(mac.current_time) + 2.f;
+
+      ImPlot::SetupAxisLimits(ImAxis_X1, x_min, x_max, ImGuiCond_Always);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, y_min, y_max, ImGuiCond_Always);
+
+      ImPlot::SetupAxisTicks(ImAxis_X1, x_min, x_max, 11);
+
+      ImPlot::PlotLine("Total Density", time_temp, density_temp, buffer_size);
+    }
+
+    ImPlot::EndPlot();
+  }
 
   ImGui::Text("Camera Information:");
   ImGui::Text("Position: (%.3f, %.3f, %.3f)", camera->position.x(),
@@ -166,7 +230,7 @@ void Renderer3D::_setup_imgui() {
   ImGui::Text("Azimuth: %.3f deg", gimbal_control->get_azimuth_deg());
   ImGui::Text("Elevation: %.3f deg", gimbal_control->get_elevation_deg());
   ImGui::Text("Radius: %.3f", gimbal_control->get_radius());
-  ImGui::Separator();
+  ImGui::Spacing();
 
   ImGui::PushItemWidth(150);
   ImGui::ColorEdit3("Solid Color", (float *)&solid_color,

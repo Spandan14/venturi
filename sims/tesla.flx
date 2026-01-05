@@ -1,0 +1,11 @@
+dim 3D
+
+grid 100 x 25 x 1 with dx = 1
+window 1760 x 800
+
+set tesla = cells where (i < 20) and (5 <= j <= 10)
+
+density all = 0.15
+density tesla = 2.3
+
+force all = (10, 0, 0)
