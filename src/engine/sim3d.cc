@@ -18,6 +18,7 @@ void Simulation3D::step(float dt) {
   //           << *std::max_element(mac.densities.begin(), mac.densities.end())
   //           << std::endl;
   //
+  // _apply_solids(solid_initializer);
   _apply_forces(dt);
   _advect_velocities(dt);
 
@@ -29,7 +30,9 @@ void Simulation3D::step(float dt) {
 
   _apply_flows();
   _apply_flow_ratios();
-  _apply_solids(solid_initializer);
+
+  // std::cout << "Simulation time: " << mac_next.current_time << " s"
+  //           << std::endl;
 
   std::swap(mac, mac_next);
 }
@@ -181,24 +184,96 @@ void Simulation3D::_apply_flow_ratios() {
 }
 
 void Simulation3D::_apply_solids(const SolidInitializer &initializer) {
+  std::vector<std::tuple<int, int, int>> previously_solid;
+  float total_released_density = 0.0f;
+
   for (int k = 0; k < nz; ++k) {
     for (int j = 0; j < ny; ++j) {
       for (int i = 0; i < nx; ++i) {
-        mac_next.is_solid[mac.idx(i, j, k)] =
-            initializer(i, j, k, mac_next.current_time);
+        bool was_solid = mac.is_solid[mac.idx(i, j, k)];
 
-        if (mac_next.is_solid[mac.idx(i, j, k)]) {
+        mac.is_solid[mac.idx(i, j, k)] = initializer(i, j, k, mac.current_time);
+        // mac_next.is_solid[mac.idx(i, j, k)] =
+        //     initializer(i, j, k, mac.current_time);
+
+        if (mac.is_solid[mac.idx(i, j, k)]) {
           // solid cell, set velocities to 0
-          mac_next.u[mac.u_idx(i, j, k)] = 0.0f;
-          mac_next.u[mac.u_idx(i + 1, j, k)] = 0.0f;
-          mac_next.v[mac.v_idx(i, j, k)] = 0.0f;
-          mac_next.v[mac.v_idx(i, j + 1, k)] = 0.0f;
-          mac_next.w[mac.w_idx(i, j, k)] = 0.0f;
-          mac_next.w[mac.w_idx(i, j, k + 1)] = 0.0f;
+          mac.u[mac.u_idx(i, j, k)] = 0.0f;
+          mac.u[mac.u_idx(i + 1, j, k)] = 0.0f;
+          mac.v[mac.v_idx(i, j, k)] = 0.0f;
+          mac.v[mac.v_idx(i, j + 1, k)] = 0.0f;
+          mac.w[mac.w_idx(i, j, k)] = 0.0f;
+          mac.w[mac.w_idx(i, j, k + 1)] = 0.0f;
 
-          mac_next.densities[mac.idx(i, j, k)] = 0.00f;
+          float old_density = mac.densities[mac.idx(i, j, k)];
+          total_released_density += old_density;
+
+          mac.densities[mac.idx(i, j, k)] = 0.00f;
+
+          // std::vector<std::tuple<float, float, float>> diffs = {
+          //     {1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+          //     {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
+          //
+          // for (const auto &[di, dj, dk] : diffs) {
+          //   int ni = i + di;
+          //   int nj = j + dj;
+          //   int nk = k + dk;
+          //   if (ni >= 0 && ni < nx && nj >= 0 && nj < ny && nk >= 0 &&
+          //       nk < nz) {
+          //     if (!mac.is_solid[mac.idx(ni, nj, nk)]) {
+          //       mac.densities[mac.idx(ni, nj, nk)] += old_density / 6.0f;
+          //     }
+          //   }
+          // }
+
+          // mac_next.u[mac.u_idx(i, j, k)] = 0.0f;
+          // mac_next.u[mac.u_idx(i + 1, j, k)] = 0.0f;
+          // mac_next.v[mac.v_idx(i, j, k)] = 0.0f;
+          // mac_next.v[mac.v_idx(i, j + 1, k)] = 0.0f;
+          // mac_next.w[mac.w_idx(i, j, k)] = 0.0f;
+          // mac_next.w[mac.w_idx(i, j, k + 1)] = 0.0f;
+          //
+          // mac_next.densities[mac.idx(i, j, k)] = 0.00f;
+        }
+
+        if (was_solid && !mac.is_solid[mac.idx(i, j, k)]) {
+          previously_solid.emplace_back(i, j, k);
         }
       }
+    }
+  }
+
+  // redistribute density from previously solid cells
+  for (const auto &[i, j, k] : previously_solid) {
+    // float distribute_density =
+    //     total_released_density / static_cast<float>(previously_solid.size());
+    // mac.densities[mac.idx(i, j, k)] +=
+    //     std::max(distribute_density, MIN_FLUID_DENSITY);
+    // grab density from average of neighbors
+
+    std::vector<std::tuple<float, float, float>> diffs = {
+        {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+
+    float accumulated_density = 0.0f;
+    int valid_neighbors = 0;
+    for (const auto &[di, dj, dk] : diffs) {
+      int ni = i + di;
+      int nj = j + dj;
+      int nk = k + dk;
+      if (ni >= 0 && ni < nx && nj >= 0 && nj < ny && nk >= 0 && nk < nz) {
+        if (!mac.is_solid[mac.idx(ni, nj, nk)]) {
+          accumulated_density += mac.densities[mac.idx(ni, nj, nk)];
+          valid_neighbors++;
+        }
+      }
+    }
+
+    if (valid_neighbors > 0) {
+      mac.densities[mac.idx(i, j, k)] +=
+          std::max(accumulated_density / static_cast<float>(valid_neighbors),
+                   MIN_FLUID_DENSITY);
+    } else {
+      mac.densities[mac.idx(i, j, k)] += MIN_FLUID_DENSITY;
     }
   }
 }

@@ -23,6 +23,8 @@ public:
   void initialize_flow_ratios(const FlowRatioGenerator &generator) override;
 
 private:
+  static constexpr float MIN_FLUID_DENSITY = 0.01f;
+
   MAC3D mac;
   MAC3D mac_next;
 
